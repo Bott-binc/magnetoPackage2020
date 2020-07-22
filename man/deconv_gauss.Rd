@@ -7,9 +7,9 @@
 deconv_gauss(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 4)
 }
 \arguments{
-\item{imageMatrix}{a imported image, can be imported with tiff_import()}
+\item{imageMatrix}{An imported image, can be imported with tiff_import()}
 
-\item{sig}{significance parameter, used in dnorm as the final quantile}
+\item{sig}{Significance parameter, used in dnorm as the final quantile}
 
 \item{kern.trunc}{Truncated value for the kernel}
 

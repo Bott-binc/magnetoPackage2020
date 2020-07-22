@@ -147,25 +147,25 @@
 #' @return dataframe  1x2 leftDist, rightDist for columns
 .finding_distance_to_peaks <- function(FindingPeaksdf, rowSums, peakIndex){
   FindingPeaksIndex <- sort(FindingPeaksdf$Index, decreasing = FALSE)
-  currentIndex <- FindingPeaksIndex[peakIndex]
+  currentIndex <- which(FindingPeaksIndex == FindingPeaksdf$Index[peakIndex])
   if (peakIndex > length(FindingPeaksIndex)) {
     return(stop("Less peaks then peak index"))
   }
   if (length(FindingPeaksIndex) == 1) {
-    distanceToRight <- length(rowSums) - currentIndex
-    distanceToLeft <- currentIndex - 1
+    distanceToRight <- length(rowSums) - FindingPeaksIndex[currentIndex]
+    distanceToLeft <- FindingPeaksIndex[currentIndex] - 1
   }
-  else if (peakIndex > 1 & peakIndex < length(FindingPeaksIndex)) {
-    distanceToRight <- FindingPeaksIndex[peakIndex + 1] - currentIndex
-    distanceToLeft <- currentIndex - FindingPeaksIndex[peakIndex - 1]
+  else if (currentIndex > 1 & currentIndex < length(FindingPeaksIndex)) {
+    distanceToRight <- FindingPeaksIndex[currentIndex + 1] - FindingPeaksIndex[currentIndex]
+    distanceToLeft <- FindingPeaksIndex[currentIndex] - FindingPeaksIndex[currentIndex - 1]
   }
-  else if (peakIndex == 1) {
-    distanceToRight <- FindingPeaksIndex[peakIndex + 1] - currentIndex
-    distanceToLeft <- currentIndex - 1
+  else if (currentIndex == 1) {
+    distanceToRight <- FindingPeaksIndex[currentIndex + 1] - FindingPeaksIndex[currentIndex]
+    distanceToLeft <- FindingPeaksIndex[currentIndex] - 1
   }
-  else if (peakIndex == length(FindingPeaksIndex)) {
-    distanceToRight <- length(rowSums) - currentIndex
-    distanceToLeft <- currentIndex - FindingPeaksIndex[peakIndex - 1]
+  else if (currentIndex == length(FindingPeaksIndex)) {
+    distanceToRight <- length(rowSums) - FindingPeaksIndex[currentIndex]
+    distanceToLeft <- FindingPeaksIndex[currentIndex] - FindingPeaksIndex[currentIndex - 1]
   }
   Distance <- data.frame(leftDist = distanceToLeft, rightDist = distanceToRight)
   return(Distance)
@@ -182,7 +182,6 @@
 #'
 #' @return FindingPeaksdf along with the starting and ending points of each peak
 .finding_Peak_Start_Ends <- function(FindingPeaksdf, rowSums){
-
   peakStart <- vector()
   peakEnd <- vector()
   for (k in 1:length(FindingPeaksdf$Index)) {
@@ -202,7 +201,6 @@
       }
       if (rowSums[leftSide] <= tempHeightLeft &
           rowSums[rightSide] <= tempHeightRight) {
-
         tempHeightLeft <- rowSums[leftSide]
         tempHeightRight <- rowSums[rightSide]
       }
@@ -254,7 +252,7 @@
 
 
 
-#' Non bright image scaling to gaussian
+#' Non bright image scaling with gaussian deconvolution
 #'
 #' @param imageMatrix An imported image, can be imported with tiff_import()
 #' @param sig Significance parameter, used in dnorm as the final quantile
@@ -263,13 +261,16 @@
 #'
 #' @return Gaussian matrix scaled for bright
 .not_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3){
+  if (length(imageMatrix) < 20) {
+    return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
+  }
   gaussimageMatrix <- abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) ))
 
   imageMatrix[imageMatrix = NULL] <- 0
   imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
 
-  gaussimageMatrix[0:100,] <- mean(gaussimageMatrix)
+  gaussimageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussimageMatrix)
   gaussimageMatrix[(nrow(gaussimageMatrix) - 60):(nrow(gaussimageMatrix)),] <- mean(gaussimageMatrix)
   gaussimageMatrix[gaussimageMatrix < 0] <- 0
 
@@ -287,7 +288,9 @@
 #'
 #' @return Gaussian matrix scaled for bright
 .for_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3){
-
+  if (length(imageMatrix) < 20) {
+    return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
+  }
   imageMatrix[imageMatrix = NULL] <- 0
   imageMatrix[imageMatrix < (quantile(imageMatrix,0.95))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
@@ -299,3 +302,34 @@
 
   return(gaussimageMatrix)
 }
+
+
+# rough_bounds <- function(imageMatrix, FindPeaksdf){
+#
+#   startrow <- round(PossiblePeaks$firstPeak[START_INDEX]) - 50
+#   upperbound <- vector(length = ncol(image))
+#   for (c in 1:ncol(image)) {
+#     if (image[startrow, c] == 0) {
+#       upperbound[c] <- startrow
+#       next
+#     } else{
+#       #Search above and below
+#       for (i in 1:10) {
+#         above <- startrow + i
+#         below <- startrow - i
+#         if (image[above, c] == 0) {
+#           upperbound[c] <- above
+#           startrow <- above
+#           break
+#         }
+#         if (image[below, c] == 0) {
+#           upperbound[c] <- below
+#           startrow <- below
+#           break
+#         }
+#       }
+#
+#     }
+#   }
+#   upperbound <- abs(upperbound - nrow(image))
+# }

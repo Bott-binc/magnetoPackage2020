@@ -103,17 +103,3 @@ test_that("Returns the correct start and ends",{
   expect_equal(.finding_Peak_Start_Ends(ConstDecreasingPeak, rowSumsDec), constDecExpected)
 })
 
-
-
-context(desc = ".not_bright_image")
-test_that("Returns the correct gaussian matrix", {
-  imageMat <- readRDS("~/magneto/tests/testData/tiffimport1861.RDS")
-  expected <- readRDS()
-})
-
-
-
-context(desc = ".for_bright_image")
-test_that("Returns the correct gaussian matrix",{
-
-})

@@ -102,3 +102,16 @@ not_empty_file <- function(filePath, fileName){
 #     return(array)  # This is the case of no array
 #   }
 # }
+
+
+
+#This is for later with the full function (with for loops so the function doesn't crash)
+# tryCatchError <- function(aFunction){
+#   running <- tryCatch(aFunction, error = function(e) e)
+#   if (inherits(running, "error")) {
+#     return(running)
+#   }
+#   else {
+#     return(running)
+#   }
+# }

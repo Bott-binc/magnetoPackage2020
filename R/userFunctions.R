@@ -102,7 +102,7 @@ bright <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProba
 #' @export
 find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
                        minPeakHeight = (0.05*max(rowSums)), plots = TRUE, StartEndplotLine = TRUE) {
-  if(!is.vector(rowSums, mode = "numeric")) {
+  if (!is.vector(rowSums, mode = "numeric")) {
     return(stop("rowSums must be a vector"))
   }
   reticulate::source_python("inst/python/finding_peakspy.py")
@@ -112,7 +112,6 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
   if (dim(peakInfo)[1] == 0) {
     return(stop("No Peaks Found..."))
   }
-
 
   peaksNoEdge <- .edge_peaks_rm(peakInfo, rowSums, percentFromEdge)
   foundPeaks <- .highest_peaks(peaksNoEdge, maxPeaksAllowed = maxPeakNumber)
@@ -159,20 +158,31 @@ find_paths_for_keyword <- function(path = "~/", keyword){
 
 
 
-# TIS_bright_findPeaks <- function(fileName, fileLoc, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5,
-#                                   NADefault = 0, minAloudDistance = 100, maxPeakNumber = 4, percentFromEdge = 10,
-#                                   minPeakHeight = NA, withPlots = TRUE, StartEndPlotLine = TRUE){
-#
-#   if (brightDecision == TRUE){
-#     .not_bright_image(imageMatrix = imageMatrix)
-#     distance <- 100
-#   }
-#   else{
-#     .for_bright_image(imageMatrix = imageMatrix)
-#     distance <- 50
-#   }
-#   col_sums <- colSums(gaussImage)
-#   rowSums <- rowSums(gaussImage)^2
-#
-# }
+TIS_RoughBounds <- function(fileName, fileLoc, Brightbeta0 = -2.774327, Brightbeta1 = 51.91687, cutoffProbability = 0.5,
+                                  NADefault = 0, minAllowedDistance = 100, maxPeakNumber = 4, percentFromEdge = 10,
+                                  minPeakHeightperc = 0.05, withPlots = TRUE, StartEndPlotLine = TRUE) {
+  imageMatrix <- tiff_import(fileName, fileLoc)
+  .horizontal_image_check(imageMatrix)
+  brightDecision <- bright(imageMatrix, beta0 = Brightbeta0, beta1 = Brightbeta1, cutoffProbability, NADefault)
+
+  if (brightDecision == TRUE) {
+    #.not_bright_image(imageMatrix = imageMatrix)
+    distance <- minAllowedDistance
+  }
+  else{
+    #.for_bright_image(imageMatrix = imageMatrix)
+    distance <- minAllowedDistance/2
+  }
+  gaussImageMatrix <- abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 )))
+  col_sums <- colSums(gaussImageMatrix)
+  rowSums <- rowSums(gaussImageMatrix)^2
+  minHeightPeaks <- minPeakHeightperc*max(rowSums)
+  peaks <- find_peaks(rowSums = rowSums, minDistance = distance, maxPeakNumber = maxPeakNumber, percentFromEdge = percentFromEdge,
+                      minPeakHeight = minHeightPeaks, plots = withPlots, StartEndplotLine = StartEndPlotLine)
+
+
+
+}
+
+
 

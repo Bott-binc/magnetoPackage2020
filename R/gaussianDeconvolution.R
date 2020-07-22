@@ -10,13 +10,16 @@
 #' @return A gaussian deconvoluted image matrix
 #' @export
 deconv_gauss <- function(imageMatrix , sig = 10, kern.trunc = 0.05, nw = 4 ){
+  if (length(imageMatrix) < 20) {
+    return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
+  }
   # pad imageMatrix
-  y <- numeric( nextn( length(imageMatrix), factors = 2 ) )
+  y <- numeric(stats::nextn( length(imageMatrix), factors = 2 ) )
   y[1:length(imageMatrix)] <- imageMatrix
   Y <- stats::fft(y)
 
   # Gaussian kernel
-  g <- dnorm( 0:(3*sig), sd = sig )
+  g <- stats::dnorm( 0:(3*sig), sd = sig )
   # Pad kernel
   k <- numeric( length(y) )
   k[1:length(g)] <- g

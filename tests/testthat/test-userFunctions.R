@@ -79,7 +79,12 @@ test_that("Returns The Correct Error",{
 
 context(desc = "deconv_gauss")
 test_that("Returns expected value", {
-  image <- readRDS("~/magneto/tests/testData/tiffimport1861.RDS")
-  expected <- readRDS("~/magneto/tests/testData/gaussimport1861.RDS")
+  image <- matrix(data = c(1:12), nrow = 4, ncol = 6)
+  expected <- c(-3.1587712, -3.5025280, -3.6482256, -3.7332883,
+                -3.7663271, -3.3626800, -1.7124795, 1.8264546,
+                6.8017323, 11.3811585, 13.3243517, 11.5739424,
+                7.0550070,  1.9330442, -1.9662331, -4.1387981,
+                -5.0355809, -4.9397223, -3.3559227,  0.4073428,
+                6.0395086, 11.7147557, 15.0063607, 14.5793650)
   expect_equal(deconv_gauss(imageMatrix = image), expected)
 })
