@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.txt
+*.csv
+*.RDS
+NAMESPACE
+LICENSE
+.Rbuildignore
+magneto.Rproj
