@@ -264,17 +264,18 @@
   if (length(imageMatrix) < 20) {
     return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
   }
-  gaussimageMatrix <- abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) ))
+  imageMatrix[is.na(imageMatrix)] <- 0
+  gaussImageMatrix <- suppressWarnings(abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) )))
 
-  imageMatrix[imageMatrix = NULL] <- 0
+
   imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
 
-  gaussimageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussimageMatrix)
-  gaussimageMatrix[(nrow(gaussimageMatrix) - 60):(nrow(gaussimageMatrix)),] <- mean(gaussimageMatrix)
-  gaussimageMatrix[gaussimageMatrix < 0] <- 0
-
-  return(gaussimageMatrix)
+  gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
+  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
+  gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
+  return(retdf)
 }
 
 
@@ -285,22 +286,23 @@
 #' @param sig Significance parameter, used in dnorm as the final quantile
 #' @param kern.trunc Truncated value for the kernel
 #' @param nw A positive double-precision number, the time-bandwidth parameter
+#' @param brightQuantile the quantile that will be a cutoff for image pixels set to 0
 #'
 #' @return Gaussian matrix scaled for bright
-.for_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3){
+.for_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3, brightQuantile = 0.95){
   if (length(imageMatrix) < 20) {
     return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
   }
-  imageMatrix[imageMatrix = NULL] <- 0
-  imageMatrix[imageMatrix < (quantile(imageMatrix,0.95))] <- 0
+  imageMatrix[is.na(imageMatrix)] <- 0
+  imageMatrix[imageMatrix < (stats::quantile(imageMatrix, brightQuantile))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
-  gaussimageMatrix <-  t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ))
+  gaussImageMatrix <-  suppressWarnings(abs(t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ))))
 
-  gaussimageMatrix[0:100, ] <- mean(gaussimageMatrix)
-  gaussimageMatrix[(nrow(gaussimageMatrix) - 60):nrow(gaussimageMatrix),] <- mean(gaussimageMatrix)
-  gaussimageMatrix[gaussimageMatrix < 0] <- 0
-
-  return(gaussimageMatrix)
+  gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
+  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):nrow(gaussImageMatrix),] <- mean(gaussImageMatrix)
+  gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
+  return(retdf)
 }
 
 

@@ -86,5 +86,5 @@ test_that("Returns expected value", {
                 7.0550070,  1.9330442, -1.9662331, -4.1387981,
                 -5.0355809, -4.9397223, -3.3559227,  0.4073428,
                 6.0395086, 11.7147557, 15.0063607, 14.5793650)
-  expect_equal(deconv_gauss(imageMatrix = image), expected)
+  expect_equal(suppressWarnings(deconv_gauss(imageMatrix = image)), expected)
 })

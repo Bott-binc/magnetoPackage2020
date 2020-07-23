@@ -103,3 +103,28 @@ test_that("Returns the correct start and ends",{
   expect_equal(.finding_Peak_Start_Ends(ConstDecreasingPeak, rowSumsDec), constDecExpected)
 })
 
+
+
+context(desc = ".not_bright_image")
+test_that("scales correctly with correct return", {
+  image <- matrix(c(NA, NA, NA, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),nrow = 4, ncol = 6) #avg 0.45 = 4.5/10
+  expected <- readRDS("~/magneto/tests/testData/nonBrightRet.RDS")
+  expect_equal(.not_bright_image(imageMatrix = image), expected)
+})
+test_that("Returns Correct Error to User", {
+  image <- matrix(data = c(1:12), nrow = 4, ncol = 3)
+  expect_error(.not_bright_image(image))
+})
+
+
+
+context(desc = ".for_bright_image")
+test_that("scales correctly with correct return", {
+  image <- matrix(c(NA, NA, NA, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),nrow = 4, ncol = 6) #avg 0.45 = 4.5/10
+  expected <- readRDS("~/magneto/tests/testData/forBrightnessRet.RDS")
+  expect_equal(.for_bright_image(imageMatrix = image), expected)
+})
+test_that("Returns Correct Error to User", {
+  image <- matrix(data = c(1:12), nrow = 4, ncol = 3)
+  expect_error(.for_bright_image(image))
+})
