@@ -18,7 +18,7 @@ deconv_gauss <- function(imageMatrix , sig = 10, kern.trunc = 0.05, nw = 4 ){
   # Gaussian kernel
   g <- stats::dnorm( 0:(3*sig), sd = sig )
   # Pad kernel
-  k <- numeric( length(y) )
+  k <- numeric( length(Y) )
   k[1:length(g)] <- g
   k[length(k):(length(k) - length(g) + 2)] <- g[-1]
   k <- k / sum(k)

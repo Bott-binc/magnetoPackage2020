@@ -120,7 +120,7 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
   if(plots == TRUE){
   .plot_peaks(ret, rowSums)
   }
-  return(ret)
+  return(ret[order(ret$Index),])
 
 }
 
