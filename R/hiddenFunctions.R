@@ -306,9 +306,6 @@
 }
 
 
-.rough_bounds <- function(imageMatrix, FindPeaksdf){
-
-}
 
 #' Funding Rough Bounds for Two Traces
 #'
@@ -322,81 +319,92 @@
 #  below and above the trace tangle in the middle of the image
 #
 .find_bounds <- function(imageMatrix, FindPeaksdf, rowSums){
-  
+
   # FindPeaksdf -- Row Index, Max Height, PeakStart, PeakEnd -- identifies traces by summing rows
-  
+
   # Try to find distance between peaks
   peakDistance <- .finding_distance_to_peaks(FindPeaksdf, rowSums, peakIndex = 1)
-  
+
   # Take the smaller to use as the envelope
   minPeakDistance <- min(peakDistance$leftDist, peakDistance$rightDist)  # unit test - make sure this never becomes negative
-  
+
   # PeakStart[1] is the first peak, from top of image moving down
   startrow_top <- FindPeaksdf$PeakStart[1] - minPeakDistance
-  
+
   ## Upper bound, trace 1  (upper = top of image)
   min_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    white_pixels <- which(x == 1) 
-    min(white_pixels[white_pixels > startrow_top]) }  
+    white_pixels <- which(x == 1)
+    min(white_pixels[white_pixels > startrow_top]) }
   )
-  
+
   ## Actually lower bound, trace 2  (lower = bottom of image)
   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    white_pixels <- which(x == 1) 
-    max(white_pixels[white_pixels > startrow_top]) }  
+    white_pixels <- which(x == 1)
+    max(white_pixels[white_pixels > startrow_top]) }
   )
-  
+
   # Case 1 - the peaks are clearly separated, which means FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2]
   # (or, rather, at least a few pixels part ...)
   if(FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2] - 1) {
-    
+
     middle <- rep( round((FindPeaksdf$PeakEnd[1] + FindPeaksdf$PeakStart[2]) / 2), ncol(imageMatrix) )
-    
+
   } else {  # Case 2 - the peaks are smeared together - possibly still separated, but not clear from FindPeaks
-    
+
     ## Work from these two, find the midpoint of the traces OR the collision
     middle_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
       white_pixels <- which(x == 1)
       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
       d_white <- diff(white_pixels)
-      
+
       if(any(d_white) > 1) { # there's a gap between traces, find the middle of it
-        
+
         bottom_trace1 <- white_pixels[which(d_white > 1)[1] - 1]
         top_trace2 <- white_pixels[which(d_white > 1)[1]]
         round( (bottom_trace1 + top_trace2) / 2 )
-        
+
       } else {  # the traces collided - there's no gap between them!
-        
+
         round(( white_pixels[1] + white_pixels[length(white_pixels)] ) / 2 )
-        
+
       }
     })
-    
+
     ## Identify collided columns, if any
     collided <- apply(imageMatrix, MAR = 2, FUN = function(x) {
       white_pixels <- which(x == 1)
       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
       d_white <- diff(white_pixels)
-      
+
       if (any(d_white) > 1) { # there's a gap between traces, no collision
-        
+
         FALSE
-        
+
       } else {  # the traces collided - there's no gap between them!
-        
+
         TRUE
-        
+
       }
     })
-    
-    
+
+
     # have collided, middle_white, min_white, max_white
     top_envelope <- min_white
     middle_envelope <- middle_white
     bottom_envelope <- max_white
     collided_cols <- collided
-    
+
   }
 }
 
+
+
+.remove_timing_traces <- function(FindPeaksdf){
+  if (FindPeaksdf$PeakEnd[2] > FindPeaksdf$PeakStart[3] || FindPeaksdf$PeakEnd[1] > FindPeaksdf[3]) {
+    return(stop("Cannot remove timing as the traces overlap timing lines"))
+  }
+  else{
+    FindPeaksdf[-c(3,4), ]
+    return(FindPeaksdf)
+  }
+}

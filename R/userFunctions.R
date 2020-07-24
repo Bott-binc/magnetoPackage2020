@@ -116,6 +116,7 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
   peaksNoEdge <- .edge_peaks_rm(peakInfo, rowSums, percentFromEdge)
   foundPeaks <- .highest_peaks(peaksNoEdge, maxPeaksAllowed = maxPeakNumber)
 
+
   ret <- .finding_Peak_Start_Ends(foundPeaks, rowSums)
   if(plots == TRUE){
   .plot_peaks(ret, rowSums)
