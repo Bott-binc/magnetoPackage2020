@@ -113,7 +113,7 @@
   if (!is.data.frame(FindingPeaksdf)) {
     return(stop("FindingPeaksdf(dataframe) must be a dataframe"))
   }
-  if (maxPeaksAllowed <= 0){
+  if (maxPeaksAllowed <= 0) {
     return(stop("MaxPeaksAllowed must be more then 0"))
   }
   highestPeaksIndex <- vector()
@@ -261,9 +261,6 @@
 #'
 #' @return Gaussian matrix scaled for bright
 .not_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3){
-  if (length(imageMatrix) < 20) {
-    return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
-  }
   imageMatrix[is.na(imageMatrix)] <- 0
   gaussImageMatrix <- suppressWarnings(abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) )))
 
@@ -271,11 +268,13 @@
   imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
 
-  gaussImageMatrix[0:floor((1/20)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
-  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.05*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
+  gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
+  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
   gaussImageMatrix[gaussImageMatrix < 0] <- 0
   retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
   return(retdf)
+
+  return(gaussimageMatrix)
 }
 
 
@@ -290,13 +289,10 @@
 #'
 #' @return Gaussian matrix scaled for bright
 .for_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3, brightQuantile = 0.95){
-  if (length(imageMatrix) < 20) {
-    return(stop("the imageMatrix must be larger then 20 to run gaussian decon"))
-  }
   imageMatrix[is.na(imageMatrix)] <- 0
   imageMatrix[imageMatrix < (stats::quantile(imageMatrix, brightQuantile))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
-  gaussImageMatrix <-  suppressWarnings(abs(t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ))))
+  gaussImageMatrix <- abs(t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 )))
 
   gaussImageMatrix[0:floor((1/20) * nrow(imageMatrix))] <- mean(gaussImageMatrix)
   gaussImageMatrix[(nrow(gaussImageMatrix) - 0.05 * nrow(imageMatrix)):nrow(gaussImageMatrix), ] <- mean(gaussImageMatrix)
@@ -307,104 +303,188 @@
 
 
 
-#' Funding Rough Bounds for Two Traces
+
+.get_trace_start_ends <- function(imageMatrix, cutPercentage = 0.01, peakThreshold = 0.05, gapAllow = 20, returnMat = TRUE){
+  imageMatrix <- .horizontal_image_check(imageMatrix)
+  processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
+  colSumsImage <- colSums(processedImage$gaussImageMatrix)
+
+  len <- length(colSumsImage)
+  cutPerc <- round(cutPercentage/100*len)
+  diffsColSms <- abs(diff(colSumsImage))
+  possibleStartDiffs <- which(diffsColSms >= peakThreshold) # how big of a difference you are looking for (potential peaks)
+  #riddance of gaps between possible starts(includes the black surround on an image)
+  chosenDiffs <- possibleStartDiffs[which(abs(diff(possibleStartDiffs))  <= gapAllow)]
+  chosenDiffs <- chosenDiffs[which(chosenDiffs <= (len - cutPerc) & chosenDiffs >= cutPerc)]
+  first <- chosenDiffs[1]
+  newFirst <- first
+  last <- chosenDiffs[length(chosenDiffs)]
+  newLast <- last
+  compareLeft <- colSumsImage[first]
+  compareRight <- colSumsImage[last]
+  middle <- len/2
+  middleMean <- mean(colSumsImage[(middle - 0.2*len):(middle + 0.2*len)])
+  for (j in 1:0.2*len) {
+    if (colSumsImage[first + j] <= compareLeft + 1 & colSumsImage[first + j]  <= middleMean - 3) {
+      newFirst <- first + j
+    }
+  }
+  for (k in 1:1000) {
+    if (colSumsImage[last - k] <= compareRight + 1 & colSumsImage[last - k]  <= middleMean - 3) {
+      newLast <- last - k
+    }
+  }
+  if (returnMat == FALSE) {
+
+  return(newFirst, newLast)
+  }
+  else {
+    ImageNoSides <- processedImage$gaussImageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))]
+    return(ImageNoSides)
+  }
+}
+
+
+
+
+#' Finding Rough Bounds for Two Traces
 #'
 #' @param imageMatrix An imported image, can be imported with tiff_import()
 #' @param FindPeaksdf -- Row Index, Max Height, PeakStart, PeakEnd -- identifies traces by summing rows
 #' @param rowSums Of the imported matrix from original picture
-#'
+#' @param max_roc Maximum Rate-of-Change of pixel location column-by-column
 #' @returns
 #
-#  NOTE: assumes that the timing traces have been removed, so there is "whitespace" (black)
-#  below and above the trace tangle in the middle of the image
-#
-.find_bounds <- function(imageMatrix, FindPeaksdf, rowSums){
+.find_bounds_2 <- function(imageMatrix, FindPeaksdf, rowSums, max_roc = 20){
+  #
+  #  FindPeaksdf -- Row Index of "peak", Max Height of "peak", PeakStart/PeakEnd - which are the edges
+  #  of the ACTUAL spikey bit of the peak, not the overall mountain shape
+  #
 
-  # FindPeaksdf -- Row Index, Max Height, PeakStart, PeakEnd -- identifies traces by summing rows
+  # what if there ARE no white pixels ... what happens?
+  # subset to imageMatrix[, first_col_that_has_white:last_col_that_has_white]
 
-  # Try to find distance between peaks
-  peakDistance <- .finding_distance_to_peaks(FindPeaksdf, rowSums, peakIndex = 1)
 
-  # Take the smaller to use as the envelope
-  minPeakDistance <- min(peakDistance$leftDist, peakDistance$rightDist)  # unit test - make sure this never becomes negative
-
-  # PeakStart[1] is the first peak, from top of image moving down
-  startrow_top <- FindPeaksdf$PeakStart[1] - minPeakDistance
-
+  #########################################################################
+  ##
   ## Upper bound, trace 1  (upper = top of image)
+
+  # First white pixel per column
   min_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    white_pixels <- which(x == 1)
-    min(white_pixels[white_pixels > startrow_top]) }
-  )
+    min( which(x == 1) )
+  })
 
-  ## Actually lower bound, trace 2  (lower = bottom of image)
+  # Some are text and artifacts
+  d_e <- diffs(min_white)
+  bad_text <- which(abs(d_e) >= max_roc)  # need to check here
+
+  # Instead, jump to other side of these ... then find the first white going down
+  min_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
+    first_white <- min( which(x == 1) )
+    bottom_first <- min( which(x[(first_white+1):length(x)] == 0) )
+    min( which( x[(bottom_first+1):length(x)] == 1 ) )
+  })
+  min_white[bad_text] <- min_white_fix
+
+  ############################################################################
+  ##
+  ## Lower bound, trace 4? (lower = bottom of image)
+
+  # Last white pixel per column
   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    white_pixels <- which(x == 1)
-    max(white_pixels[white_pixels > startrow_top]) }
-  )
+    max( which(x == 1) )
+  })
 
-  # Case 1 - the peaks are clearly separated, which means FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2]
-  # (or, rather, at least a few pixels part ...)
-  if(FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2] - 1) {
+  # Some are text and artifacts
+  d_e <- diffs(max_white)
+  bad_text <- which(abs(d_e) >= max_roc)  # need to check bad_text for length > 1
 
-    middle <- rep( round((FindPeaksdf$PeakEnd[1] + FindPeaksdf$PeakStart[2]) / 2), ncol(imageMatrix) )
+  # Instead, jump to other side of these ... then find the first white going down
+  max_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
+    last_white <- max( which(x == 1) )
+    bottom_black <- max( which(x[1:(last_white - 1)] == 0) )
+    max( which( x[1:(bottom_black - 1)] == 1 ) )
+  })
+  max_white[bad_text] <- max_white_fix
 
-  } else {  # Case 2 - the peaks are smeared together - possibly still separated, but not clear from FindPeaks
-
-    ## Work from these two, find the midpoint of the traces OR the collision
-    middle_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-      white_pixels <- which(x == 1)
-      white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
-      d_white <- diff(white_pixels)
-
-      if(any(d_white) > 1) { # there's a gap between traces, find the middle of it
-
-        bottom_trace1 <- white_pixels[which(d_white > 1)[1] - 1]
-        top_trace2 <- white_pixels[which(d_white > 1)[1]]
-        round( (bottom_trace1 + top_trace2) / 2 )
-
-      } else {  # the traces collided - there's no gap between them!
-
-        round(( white_pixels[1] + white_pixels[length(white_pixels)] ) / 2 )
-
-      }
-    })
-
-    ## Identify collided columns, if any
-    collided <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-      white_pixels <- which(x == 1)
-      white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
-      d_white <- diff(white_pixels)
-
-      if (any(d_white) > 1) { # there's a gap between traces, no collision
-
-        FALSE
-
-      } else {  # the traces collided - there's no gap between them!
-
-        TRUE
-
-      }
-    })
-
-
-    # have collided, middle_white, min_white, max_white
-    top_envelope <- min_white
-    middle_envelope <- middle_white
-    bottom_envelope <- max_white
-    collided_cols <- collided
-
-  }
+  # fix the bound indexes to make sense?
+  return(list(top_bound = min_white, bottom_bound = max_white))
 }
 
 
-
-.remove_timing_traces <- function(FindPeaksdf){
-  if (FindPeaksdf$PeakEnd[2] > FindPeaksdf$PeakStart[3] || FindPeaksdf$PeakEnd[1] > FindPeaksdf[3]) {
-    return(stop("Cannot remove timing as the traces overlap timing lines"))
-  }
-  else{
-    FindPeaksdf[-c(3,4), ]
-    return(FindPeaksdf)
-  }
-}
+#
+#   # PeakStart[1] is the first peak, from top of image moving down
+#   startrow_top <- FindPeaksdf$PeakStart[1] - minPeakDistance
+#
+#
+#   ## Actually lower bound, trace 2  (lower = bottom of image)
+#   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
+#     white_pixels <- which(x == 1)
+#     max(white_pixels[white_pixels > startrow_top]) }
+#   )
+#
+#   # Case 1 - the peaks are clearly separated, which means FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2]
+#   # (or, rather, at least a few pixels part ...)
+#   if(FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2] - 1) {
+#
+#     middle <- rep( round((FindPeaksdf$PeakEnd[1] + FindPeaksdf$PeakStart[2]) / 2), ncol(imageMatrix) )
+#
+#   } else {  # Case 2 - the peaks are smeared together - possibly still separated, but not clear from FindPeaks
+#
+#     ## Work from these two, find the midpoint of the traces OR the collision
+#     middle_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
+#       white_pixels <- which(x == 1)
+#       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
+#       d_white <- diff(white_pixels)
+#
+#       if(any(d_white) > 1) { # there's a gap between traces, find the middle of it
+#
+#         bottom_trace1 <- white_pixels[which(d_white > 1)[1] - 1]
+#         top_trace2 <- white_pixels[which(d_white > 1)[1]]
+#         round( (bottom_trace1 + top_trace2) / 2 )
+#
+#       } else {  # the traces collided - there's no gap between them!
+#
+#         round(( white_pixels[1] + white_pixels[length(white_pixels)] ) / 2 )
+#
+#       }
+#     })
+#
+#     ## Identify collided columns, if any
+#     collided <- apply(imageMatrix, MAR = 2, FUN = function(x) {
+#       white_pixels <- which(x == 1)
+#       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
+#       d_white <- diff(white_pixels)
+#
+#       if (any(d_white) > 1) { # there's a gap between traces, no collision
+#
+#         FALSE
+#
+#       } else {  # the traces collided - there's no gap between them!
+#
+#         TRUE
+#
+#       }
+#     })
+#
+#
+#     # have collided, middle_white, min_white, max_white
+#     top_envelope <- min_white
+#     middle_envelope <- middle_white
+#     bottom_envelope <- max_white
+#     collided_cols <- collided
+#
+#   }
+# }
+#
+#
+#
+# .remove_timing_traces <- function(FindPeaksdf){
+#   if (FindPeaksdf$PeakEnd[2] > FindPeaksdf$PeakStart[3] || FindPeaksdf$PeakEnd[1] > FindPeaksdf[3]) {
+#     return(stop("Cannot remove timing as the traces overlap timing lines"))
+#   }
+#   else{
+#     FindPeaksdf[-c(3,4), ]
+#     return(FindPeaksdf)
+#   }
+# }
