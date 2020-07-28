@@ -15,7 +15,7 @@
     return(stop("Can't have a percentage over 100 "))
   }
   if (!is.null(percentageLeftSide)) {
-    if( percentageLeftSide  > 100) {
+    if (percentageLeftSide  > 100) {
       return(stop("Can't have a percentage over 100 "))
     }
   }
@@ -304,17 +304,31 @@
 
 
 
-.get_trace_start_ends <- function(imageMatrix, cutPercentage = 0.01, peakThreshold = 0.05, gapAllow = 20, returnMat = TRUE){
+#' Trace Starting and Ending Points
+#'
+#' Can also be used to remove those ranges where the trace isn't if returnMat is TRUE
+#'
+#' @param imageMatrix Imported image into matrix form, can use tiff_import()
+#' @param cutPercentage A bound for which the start and end is never found, could be a flare
+#' on the sides of the scanned image
+#' @param peakThreshold Smallest difference allowed for a difference to be a possible peak
+#' @param gapAllow Distance in which another index could be considered to be the same peak,
+#' applicable for large peaks
+#' @param returnMat bool, default is to return the image with removed start and end to the user, if FALSE
+#' will return just the index of the start and end
+#'
+#' @return Image matrix with removed start and end, or the index of these start and ends
+.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, returnMat = TRUE){
   imageMatrix <- .horizontal_image_check(imageMatrix)
   processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
   colSumsImage <- colSums(processedImage$gaussImageMatrix)
-
   len <- length(colSumsImage)
-  cutPerc <- round(cutPercentage/100*len)
   diffsColSms <- abs(diff(colSumsImage))
-  possibleStartDiffs <- which(diffsColSms >= peakThreshold) # how big of a difference you are looking for (potential peaks)
+  pkThresh <- peakThreshold/100
+  possibleStartDiffs <- which(diffsColSms >= pkThresh) # how big of a difference you are looking for (potential peaks)
   #riddance of gaps between possible starts(includes the black surround on an image)
   chosenDiffs <- possibleStartDiffs[which(abs(diff(possibleStartDiffs))  <= gapAllow)]
+  cutPerc <- round(cutPercentage/100*len)
   chosenDiffs <- chosenDiffs[which(chosenDiffs <= (len - cutPerc) & chosenDiffs >= cutPerc)]
   first <- chosenDiffs[1]
   newFirst <- first
@@ -323,23 +337,30 @@
   compareLeft <- colSumsImage[first]
   compareRight <- colSumsImage[last]
   middle <- len/2
-  middleMean <- mean(colSumsImage[(middle - 0.2*len):(middle + 0.2*len)])
-  for (j in 1:0.2*len) {
+  middleMean <- mean(colSumsImage[round((middle - 0.2*len)):round((middle + 0.2*len))])
+  if (compareLeft > middleMean) {
+    compareLeft = middleMean
+  }
+  if (compareRight > middleMean) {
+    compareRight = middleMean
+  }
+  for (j in 1:round(0.2*len)) {
     if (colSumsImage[first + j] <= compareLeft + 1 & colSumsImage[first + j]  <= middleMean - 3) {
       newFirst <- first + j
     }
   }
-  for (k in 1:1000) {
+  for (k in 1:round(0.2*len)) {
     if (colSumsImage[last - k] <= compareRight + 1 & colSumsImage[last - k]  <= middleMean - 3) {
       newLast <- last - k
     }
   }
   if (returnMat == FALSE) {
-
-  return(newFirst, newLast)
+  return(list(newFirst, newLast))
   }
   else {
-    ImageNoSides <- processedImage$gaussImageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))]
+    ImageNoSides <- list(imageMatrix = processedImage$imageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))],
+                          gaussiaMatrix = processedImage$gaussImageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))])
+
     return(ImageNoSides)
   }
 }

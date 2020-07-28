@@ -122,3 +122,11 @@ test_that("scales correctly with correct return", {
   expect_equal(suppressWarnings(.for_bright_image(imageMatrix = image)), expected)
 })
 
+
+
+context(desc = ".get_trace_start_ends")
+test_that("correctStart and end found for an image",{
+  image <- readRDS("~/magneto/tests/testData/StartEndTest.RDS")
+  expected <- list(200, 6065)
+  expect_equal(.get_trace_start_ends(image, returnMat = FALSE), expected)
+})
