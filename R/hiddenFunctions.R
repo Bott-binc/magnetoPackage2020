@@ -355,7 +355,7 @@
     }
   }
   if (returnMat == FALSE) {
-  return(list(newFirst, newLast))
+  return(list(Start = newFirst, End = newLast))
   }
   else {
     ImageNoSides <- list(imageMatrix = processedImage$imageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))],
@@ -396,14 +396,14 @@
   })
 
   # Some are text and artifacts
-  d_e <- diffs(min_white)
+  d_e <- diff(min_white)
   bad_text <- which(abs(d_e) >= max_roc)  # need to check here
 
   # Instead, jump to other side of these ... then find the first white going down
   min_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
     first_white <- min( which(x == 1) )
-    bottom_first <- min( which(x[(first_white+1):length(x)] == 0) )
-    min( which( x[(bottom_first+1):length(x)] == 1 ) )
+    bottom_first <- min( which(x[(first_white + 1):length(x)] == 0) )
+    min( which( x[(bottom_first + 1):length(x)] == 1 ) )
   })
   min_white[bad_text] <- min_white_fix
 
@@ -417,7 +417,7 @@
   })
 
   # Some are text and artifacts
-  d_e <- diffs(max_white)
+  d_e <- diff(max_white)
   bad_text <- which(abs(d_e) >= max_roc)  # need to check bad_text for length > 1
 
   # Instead, jump to other side of these ... then find the first white going down
