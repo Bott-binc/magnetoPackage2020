@@ -258,23 +258,25 @@
 #' @param sig Significance parameter, used in dnorm as the final quantile
 #' @param kern.trunc Truncated value for the kernel
 #' @param nw A positive double-precision number, the time-bandwidth parameter
+#' @param cutoffQuantile the quantile that will be a cutoff for image pixels set to 0
 #'
 #' @return Gaussian matrix scaled for bright
-.not_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3){
+.not_bright_image <- function(imageMatrix,cutoffQuantile, sig = 10, kern.trunc = 0.05, nw = 3){
   imageMatrix[is.na(imageMatrix)] <- 0
   gaussImageMatrix <- suppressWarnings(abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) )))
-
 
   imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
   imageMatrix[imageMatrix > 0] <- 1
 
   gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
   gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
+  gaussImageMatrix[is.na(gaussImageMatrix)]
   gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, cutoffQuantile))] <- 0
+  gaussImageMatrix[gaussImageMatrix > 0] <- 1
   retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
   return(retdf)
 
-  return(gaussimageMatrix)
 }
 
 
@@ -296,7 +298,10 @@
 
   gaussImageMatrix[0:floor((1/20) * nrow(imageMatrix))] <- mean(gaussImageMatrix)
   gaussImageMatrix[(nrow(gaussImageMatrix) - 0.05 * nrow(imageMatrix)):nrow(gaussImageMatrix), ] <- mean(gaussImageMatrix)
+  gaussImageMatrix[is.na(gaussImageMatrix)]
   gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, brightQuantile))] <- 0
+  gaussImageMatrix[gaussImageMatrix > 0] <- 1
   retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
   return(retdf)
 }

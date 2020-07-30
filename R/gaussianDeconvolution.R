@@ -41,7 +41,6 @@ deconv_gauss <- function(imageMatrix , sig = 10, kern.trunc = 0.05, nw = 4 ){
     warning( "Kernel width in Fourier domain too narrow for dpss bandwidth specified -- windowing abandoned" )
     Y.K.win <- Y.K
   }
-
   imageMatrix.dec.win <- (Re(stats::fft( Y.K.win, inverse = TRUE ))/length(y))[1:length(imageMatrix)]
   return(imageMatrix.dec.win)
 }
