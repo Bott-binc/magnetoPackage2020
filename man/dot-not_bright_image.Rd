@@ -4,10 +4,18 @@
 \alias{.not_bright_image}
 \title{Non bright image scaling with gaussian deconvolution}
 \usage{
-.not_bright_image(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3)
+.not_bright_image(
+  imageMatrix,
+  cutoffQuantile,
+  sig = 10,
+  kern.trunc = 0.05,
+  nw = 3
+)
 }
 \arguments{
 \item{imageMatrix}{An imported image, can be imported with tiff_import()}
+
+\item{cutoffQuantile}{the quantile that will be a cutoff for image pixels set to 0}
 
 \item{sig}{Significance parameter, used in dnorm as the final quantile}
 

@@ -105,8 +105,10 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
   if (!is.vector(rowSums, mode = "numeric")) {
     return(stop("rowSums must be a vector"))
   }
-  reticulate::source_python("inst/python/finding_peakspy.py")
-  peaks <- finding_peakspy(rowSums, minPeakHeight, minDistance)
+  scipy <- reticulate::import("scipy")
+  peaks <- scipy$signal$find_peaks(x = rowSums, height = minPeakHeight, distance = minDistance)
+  #reticulate::source_python(file = system.file("py", package = packageName()))
+  #peaks <- finding_peakspy(rowSums, minPeakHeight, minDistance)
   peaks[[1]] <- peaks[[1]] + 1 # python index correction
   peakInfo = data.frame(Index = peaks[[1]], Height = peaks[[2]]$peak_heights)
   if (dim(peakInfo)[1] == 0) {
@@ -118,7 +120,7 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
 
 
   ret <- .finding_Peak_Start_Ends(foundPeaks, rowSums)
-  if(plots == TRUE){
+  if (plots == TRUE) {
   .plot_peaks(ret, rowSums)
   }
   return(ret[order(ret$Index),])

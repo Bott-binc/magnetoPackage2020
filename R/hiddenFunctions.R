@@ -323,12 +323,17 @@
 #' will return just the index of the start and end
 #'
 #' @return Image matrix with removed start and end, or the index of these start and ends
-.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, returnMat = TRUE){
+.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, sumColumns = TRUE, returnMat = TRUE){
   imageMatrix <- .horizontal_image_check(imageMatrix)
   processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
-  colSumsImage <- colSums(processedImage$gaussImageMatrix)
-  len <- length(colSumsImage)
-  diffsColSms <- abs(diff(colSumsImage))
+  #if (sumColumns == TRUE) {
+    SumsImage <- colSums(processedImage$gaussImageMatrix)
+  # }
+  # else{
+  #   SumsImage <- rowSums(processedImage$gaussImageMatrix)
+  # }
+  len <- length(SumsImage)
+  diffsColSms <- abs(diff(SumsImage))
   pkThresh <- peakThreshold/100
   possibleStartDiffs <- which(diffsColSms >= pkThresh) # how big of a difference you are looking for (potential peaks)
   #riddance of gaps between possible starts(includes the black surround on an image)
@@ -339,10 +344,10 @@
   newFirst <- first
   last <- chosenDiffs[length(chosenDiffs)]
   newLast <- last
-  compareLeft <- colSumsImage[first]
-  compareRight <- colSumsImage[last]
+  compareLeft <- SumsImage[first]
+  compareRight <- SumsImage[last]
   middle <- len/2
-  middleMean <- mean(colSumsImage[round((middle - 0.2*len)):round((middle + 0.2*len))])
+  middleMean <- mean(SumsImage[round((middle - 0.2*len)):round((middle + 0.2*len))])
   if (compareLeft > middleMean) {
     compareLeft = middleMean
   }
@@ -350,12 +355,12 @@
     compareRight = middleMean
   }
   for (j in 1:round(0.2*len)) {
-    if (colSumsImage[first + j] <= compareLeft + 1 & colSumsImage[first + j]  <= middleMean - 3) {
+    if (SumsImage[first + j] <= compareLeft + 1 & SumsImage[first + j]  <= middleMean - 3) {
       newFirst <- first + j
     }
   }
   for (k in 1:round(0.2*len)) {
-    if (colSumsImage[last - k] <= compareRight + 1 & colSumsImage[last - k]  <= middleMean - 3) {
+    if (SumsImage[last - k] <= compareRight + 1 & SumsImage[last - k]  <= middleMean - 3) {
       newLast <- last - k
     }
   }
@@ -372,6 +377,24 @@
 
 
 
+.get_trace_top_bottom <- function(imageMatrix, minDistance, maxPeakNumber, percentFromEdge){
+  browser()
+  rowSums <- rowSums(imageMatrix)
+  chosenFlats <- vector()
+  peaks <- find_peaks(rowSums, minDistance = minDistance, maxPeakNumber = maxPeakNumber, percentFromEdge = percentFromEdge, plots = FALSE)
+  firstPeak <- peaks$PeakStart[1]
+  lastPeak <- peaks$PeakEnd[length(peaks$Index)]
+  diffIndex <- which(diff(rowSums(imageMatrix)) == 0)
+  possibleFlats <- rowSums[diffIndex]
+  # for (i in 1:(length(possibleFlats) - 3)) {
+  #   if (possibleFlats[i] == possibleFlats[i + 2] & possibleFlats[i] == possibleFlats[i + 3]) {
+  #     chosenFlats <- c(chosenFlats, possibleFlats[i])
+  #   }
+  # }
+  topFlats <- rowSums[which(diffIndex < firstPeak)]#which(diffIndex == chosenFlats) < firstPeak)
+  bottomFlats <- rowSums[which(diffIndex > lastPeak)]#which(diffIndex == chosenFlats) > lastPeak)
+  return(list(topFlats[length(topFlats)], bottomFlats[1]))
+}
 
 #' Finding Rough Bounds for Two Traces
 #'
@@ -514,3 +537,61 @@
 #     return(FindPeaksdf)
 #   }
 # }
+
+
+.top_image_cut <- function(imageMatrix){
+  rowsumsImage <- rowSums(imageMatrix)
+  diffImage <- diff(rowsumsImage)
+  StartIndex = vector()
+  Length = vector()
+  foundZero <- FALSE
+  counter <- 0
+  for (i in 1:length(diffImage)) {
+    if (i == length(diffImage) & diffImage[i] == 0) {
+      if (counter == 0) {
+        Length <- append(Length, 1)
+        StartIndex <- append(StartIndex, i)
+      }
+      else {
+        Length <- append(Length, counter)
+      }
+    }
+    else if (isTRUE(foundZero) & diffImage[i] == 0) {
+      counter <- counter + 1
+    }
+    else if (isTRUE(foundZero)) {
+      Length <- append(Length, counter)
+      foundZero = FALSE
+      counter = 0
+    }
+    else if (isFALSE(foundZero) & diffImage[i] == 0) {
+      StartIndex <- append(StartIndex, i)
+      foundZero <- TRUE
+      counter <- 1
+    }
+  }
+  zeros <- data.frame(StartIndex = StartIndex, RunLength = Length)
+  peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 50, maxPeakNumber = 4, percentFromEdge = 1, plots = FALSE)
+  startFirstPeak <- peaks$PeakStart[1]
+  estCut <- sort(zeros$RunLength[which(zeros$StartIndex < startFirstPeak)], decreasing = TRUE)[1]
+  topCut <- zeros$StartIndex[which(zeros$RunLength == estCut)]
+  return(topCut)
+}
+
+
+.trim_top_bottom <- function(image, trimAmount = 100){
+  imageProcessed <- image[-c(0:trimAmount, (nrow(image) - trimAmount):nrow(image)),]
+  return(imageProcessed)
+}
+
+
+.processImage <- function(imageMatrix, cutoffQuantile, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
+  bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability, NADefault = NADefault)
+  if (bright == TRUE) {
+    imageProcessed <- .for_bright_image(imagecut)
+  }
+  if (bright == FALSE) {
+    imageProcessed <- .not_bright_image(imagecut, cutoffQuantile = 0.95)
+  }
+  return(imageProcessed)
+}

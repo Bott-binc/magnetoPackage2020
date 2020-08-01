@@ -9,6 +9,7 @@
   cutPercentage = 1,
   peakThreshold = 5,
   gapAllow = 20,
+  sumColumns = TRUE,
   returnMat = TRUE
 )
 }
