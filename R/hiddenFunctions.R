@@ -354,12 +354,24 @@
   if (compareRight > middleMean) {
     compareRight = middleMean
   }
-  for (j in 1:round(0.2*len)) {
+  if (first + round(0.2 * len) >= len){
+    index <- len - first - 1
+  }
+  else {
+    index <- round(0.2*len)
+  }
+  for (j in 1:index) {
     if (SumsImage[first + j] <= compareLeft + 1 & SumsImage[first + j]  <= middleMean - 3) {
       newFirst <- first + j
     }
   }
-  for (k in 1:round(0.2*len)) {
+  if (last - round(0.2 * len) <= 0){
+    index <- last
+  }
+  else {
+    index <- round(0.2*len)
+  }
+  for (k in 1:index) {
     if (SumsImage[last - k] <= compareRight + 1 & SumsImage[last - k]  <= middleMean - 3) {
       newLast <- last - k
     }
@@ -577,6 +589,7 @@
   topCut <- zeros$StartIndex[which(zeros$RunLength == estCut)]
   return(topCut)
 }
+
 
 
 .trim_top_bottom <- function(image, trimAmount = 100){
