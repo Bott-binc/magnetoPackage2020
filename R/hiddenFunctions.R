@@ -34,7 +34,7 @@
     rightDistance <- right
     leftDistance <- percentageLeftSide/100
 
-    rightDist <- round(rightDistance*length(rowSums))
+    rightDist <- round((1 - rightDistance)*length(rowSums))
     leftDist <- round((leftDistance)*length(rowSums))
   }
 
@@ -60,11 +60,11 @@
   if (!is.vector(rowSums) | !is.data.frame(FindingPeaksdf)) {
     return(stop("rowSums(vector) and FindingPeaksdf(dataframe) must be in the correct form"))
   }
-  if (length(rowSums) < max(FindingPeaksdf$Index)){
+  if (length(rowSums) < max(FindingPeaksdf$Index)) {
     return(stop("rowSums should be at least the same length as your largest indexed peak"))
   }
   rm <- vector()
-  dist <- .allowed_edge_distance(rowSums, percentEdge, percentEdgeForLeft)
+  dist <- .allowed_edge_distance(rowSums, percentEdge, percentageLeftSide = percentEdgeForLeft)
   rightSide <- dist$rightDist
   leftSide <- dist$leftDist
   for (k in 1:length(FindingPeaksdf$Index)) {
@@ -323,15 +323,10 @@
 #' will return just the index of the start and end
 #'
 #' @return Image matrix with removed start and end, or the index of these start and ends
-.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, sumColumns = TRUE, returnMat = TRUE){
+.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, returnMat = TRUE){
   imageMatrix <- .horizontal_image_check(imageMatrix)
   processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
-  #if (sumColumns == TRUE) {
-    SumsImage <- colSums(processedImage$gaussImageMatrix)
-  # }
-  # else{
-  #   SumsImage <- rowSums(processedImage$gaussImageMatrix)
-  # }
+  SumsImage <- colSums(processedImage$gaussImageMatrix)
   len <- length(SumsImage)
   diffsColSms <- abs(diff(SumsImage))
   pkThresh <- peakThreshold/100
@@ -388,25 +383,25 @@
 }
 
 
-
-.get_trace_top_bottom <- function(imageMatrix, minDistance, maxPeakNumber, percentFromEdge){
-  browser()
-  rowSums <- rowSums(imageMatrix)
-  chosenFlats <- vector()
-  peaks <- find_peaks(rowSums, minDistance = minDistance, maxPeakNumber = maxPeakNumber, percentFromEdge = percentFromEdge, plots = FALSE)
-  firstPeak <- peaks$PeakStart[1]
-  lastPeak <- peaks$PeakEnd[length(peaks$Index)]
-  diffIndex <- which(diff(rowSums(imageMatrix)) == 0)
-  possibleFlats <- rowSums[diffIndex]
-  # for (i in 1:(length(possibleFlats) - 3)) {
-  #   if (possibleFlats[i] == possibleFlats[i + 2] & possibleFlats[i] == possibleFlats[i + 3]) {
-  #     chosenFlats <- c(chosenFlats, possibleFlats[i])
-  #   }
-  # }
-  topFlats <- rowSums[which(diffIndex < firstPeak)]#which(diffIndex == chosenFlats) < firstPeak)
-  bottomFlats <- rowSums[which(diffIndex > lastPeak)]#which(diffIndex == chosenFlats) > lastPeak)
-  return(list(topFlats[length(topFlats)], bottomFlats[1]))
-}
+# Dont think that I am using this right now
+# .get_trace_top_bottom <- function(imageMatrix, minDistance, maxPeakNumber, percentFromEdge){
+#   browser()
+#   rowSums <- rowSums(imageMatrix)
+#   chosenFlats <- vector()
+#   peaks <- find_peaks(rowSums, minDistance = minDistance, maxPeakNumber = maxPeakNumber, percentFromEdge = percentFromEdge, plots = FALSE)
+#   firstPeak <- peaks$PeakStart[1]
+#   lastPeak <- peaks$PeakEnd[length(peaks$Index)]
+#   diffIndex <- which(diff(rowSums(imageMatrix)) == 0)
+#   possibleFlats <- rowSums[diffIndex]
+#   # for (i in 1:(length(possibleFlats) - 3)) {
+#   #   if (possibleFlats[i] == possibleFlats[i + 2] & possibleFlats[i] == possibleFlats[i + 3]) {
+#   #     chosenFlats <- c(chosenFlats, possibleFlats[i])
+#   #   }
+#   # }
+#   topFlats <- rowSums[which(diffIndex < firstPeak)]#which(diffIndex == chosenFlats) < firstPeak)
+#   bottomFlats <- rowSums[which(diffIndex > lastPeak)]#which(diffIndex == chosenFlats) > lastPeak)
+#   return(list(topFlats[length(topFlats)], bottomFlats[1]))
+# }
 
 #' Finding Rough Bounds for Two Traces
 #'
@@ -551,7 +546,20 @@
 # }
 
 
-.top_image_cut <- function(imageMatrix){
+#' Top Image Cut
+#'
+#' returns part of the image that doesn't have any horizontal lines(traces) in,
+#' will discard lettering(main use)
+#'
+#' @param imageMatrix Imported image into matrix form, can use tiff_import()
+#' @param percentEdgeForLeft passed into find peaks, if not specified, uses
+#' percentFromEdge for both left and right sides, if specified, percentFromEdge
+#' is defaulted to just the right side of the plot
+#' @param percentFromEdge used in find_peaks if you know there wont be a peak
+#'  in a region
+#'
+#' @return the recommended cutoff of the top of your image
+.top_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL){
   rowsumsImage <- rowSums(imageMatrix)
   diffImage <- diff(rowsumsImage)
   StartIndex = vector()
@@ -559,52 +567,84 @@
   foundZero <- FALSE
   counter <- 0
   for (i in 1:length(diffImage)) {
+    # last difference is 0 in diffImage
     if (i == length(diffImage) & diffImage[i] == 0) {
-      if (counter == 0) {
+      if (counter == 0) { #this is the first 0 found in a while
         Length <- append(Length, 1)
         StartIndex <- append(StartIndex, i)
       }
-      else {
+      else {# this isnt the first 0 found in a while i.e 0,0,0,0,(this one)
         Length <- append(Length, counter)
       }
     }
-    else if (isTRUE(foundZero) & diffImage[i] == 0) {
+    else if (isTRUE(foundZero) & diffImage[i] == 0) { # found another 0 in a row
       counter <- counter + 1
     }
-    else if (isTRUE(foundZero)) {
+    else if (isTRUE(foundZero)) { #end of the 0 sequence
       Length <- append(Length, counter)
       foundZero = FALSE
       counter = 0
     }
-    else if (isFALSE(foundZero) & diffImage[i] == 0) {
+    else if (isFALSE(foundZero) & diffImage[i] == 0) { #first 0 found for a new sequence
       StartIndex <- append(StartIndex, i)
       foundZero <- TRUE
       counter <- 1
     }
   }
   zeros <- data.frame(StartIndex = StartIndex, RunLength = Length)
-  peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 50, maxPeakNumber = 4, percentFromEdge = 1, plots = FALSE)
-  startFirstPeak <- peaks$PeakStart[1]
-  estCut <- sort(zeros$RunLength[which(zeros$StartIndex < startFirstPeak)], decreasing = TRUE)[1]
-  topCut <- zeros$StartIndex[which(zeros$RunLength == estCut)]
+  peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 50, maxPeakNumber = 4, percentFromEdge = percentFromEdge,
+                      plots = FALSE, percentEdgeForLeft = percentEdgeForLeft)
+  startFirstPeak <- peaks$PeakStart[1] # closest peak to the top of the image(because searching as if the image was vertical)
+  longestCut <- sort(zeros$RunLength[which(zeros$StartIndex < startFirstPeak)], decreasing = TRUE)[1] # longest less then the first peak start
+  indexesOfLongestCuts <- zeros$StartIndex[which(zeros$RunLength == longestCut)] # indexes of all points with that run length of 0's
+  if (length(indexesOfLongestCuts) > 1) {# more then one found with that run length
+    # takes the closest point less than the start of the first peak
+    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < startFirstPeak), decreasing = TRUE)][1]
+  }
+  else if (length(indexesOfLongestCuts) == 1) {# only one found with that run length
+    #takes the only one of that run length
+    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < startFirstPeak), decreasing = TRUE)]
+  }
+  else{# none found with alg, just using top of image
+    topCut = 0
+  }
   return(topCut)
 }
 
 
 
-.trim_top_bottom <- function(image, trimAmount = 100){
-  imageProcessed <- image[-c(0:trimAmount, (nrow(image) - trimAmount):nrow(image)),]
+#' Rough Trim
+#'
+#' trims roughly the top and bottom if the user knows where there will definitly not be any points
+#'
+#' @param image A matrix
+#' @param trimAmountTop Number of pixels
+#' @param trimAmountBottom Number of pixels
+#'
+#' @return the matrix without the specified bounds
+.trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom){
+  imageProcessed <- image[-c(0:trimAmountTop, (nrow(image) - trimAmountBottom):nrow(image)),]
   return(imageProcessed)
 }
 
 
+#' Process Image
+#'
+#' @param imageMatrix Imported image into matrix form, can use tiff_import()
+#' @param cutoffQuantile Used for non bright images: The quantile that will be a cutoff for image pixels set to 0
+#' @param beta0 From logistic regression on what images to be considered bright
+#' @param beta1 From logistic regression on what images to be considered bright
+#' @param cutoffProbability Passed into bright: The probability cut off for the decision of an imageMatrix being bright
+#' @param NADefault The defult value set to points of NA found by the system
+#'
+#' @return The processed image with the gaussian and the non gaussian in an array labeled respectively
 .processImage <- function(imageMatrix, cutoffQuantile, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
   bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability, NADefault = NADefault)
   if (bright == TRUE) {
-    imageProcessed <- .for_bright_image(imagecut)
+    imageProcessed <- .for_bright_image(imageMatrix)
   }
   if (bright == FALSE) {
-    imageProcessed <- .not_bright_image(imagecut, cutoffQuantile = 0.95)
+    imageProcessed <- .not_bright_image(imageMatrix, cutoffQuantile = 0.95)
   }
   return(imageProcessed)
 }

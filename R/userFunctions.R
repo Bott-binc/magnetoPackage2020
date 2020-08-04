@@ -92,6 +92,7 @@ bright <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProba
 #' @param percentFromEdge Percentage of the picture that you would like removed from edge
 #' due to an over exposed picture or flares in scanning
 #' if percentageLeftSide is unspecified uses percentage for both i.e left = 1 - right
+#' @param percentEdgeForLeft the left percentage that you want to remove(default = NULL)
 #' @param minPeakHeight minimum peak height required for a peak to be counted
 #' Default is 5perc of the max(rowSums)
 #' @param plots Plots the peaks on rowSums
@@ -100,13 +101,15 @@ bright <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProba
 #'
 #' @return data frame of peaks, peak heights, starts and ends for each peak
 #' @export
-find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
+find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge, percentEdgeForLeft = NULL,
                        minPeakHeight = (0.05*max(rowSums)), plots = TRUE, StartEndplotLine = TRUE) {
   if (!is.vector(rowSums, mode = "numeric")) {
     return(stop("rowSums must be a vector"))
   }
+  #python code
   scipy <- reticulate::import("scipy")
   peaks <- scipy$signal$find_peaks(x = rowSums, height = minPeakHeight, distance = minDistance)
+  #end of python code
   #reticulate::source_python(file = system.file("py", package = packageName()))
   #peaks <- finding_peakspy(rowSums, minPeakHeight, minDistance)
   peaks[[1]] <- peaks[[1]] + 1 # python index correction
@@ -115,7 +118,7 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge,
     return(stop("No Peaks Found..."))
   }
 
-  peaksNoEdge <- .edge_peaks_rm(peakInfo, rowSums, percentFromEdge)
+  peaksNoEdge <- .edge_peaks_rm(peakInfo, rowSums, percentFromEdge, percentEdgeForLeft = percentEdgeForLeft)
   foundPeaks <- .highest_peaks(peaksNoEdge, maxPeaksAllowed = maxPeakNumber)
 
 
