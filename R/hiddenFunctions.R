@@ -334,22 +334,24 @@
   #riddance of gaps between possible starts(includes the black surround on an image)
   chosenDiffs <- possibleStartDiffs[which(abs(diff(possibleStartDiffs))  <= gapAllow)]
   cutPerc <- round(cutPercentage/100*len)
-  chosenDiffs <- chosenDiffs[which(chosenDiffs <= (len - cutPerc) & chosenDiffs >= cutPerc)]
-  first <- chosenDiffs[1]
+  chosenDiffs <- chosenDiffs[which(chosenDiffs <= (len - cutPerc) & chosenDiffs >= cutPerc)] # which chooseDiffs are inbetween cut perc
+  first <- chosenDiffs[1] # starting with the first one in the list(closest to the out side of the image, and working in) Left Side
   newFirst <- first
-  last <- chosenDiffs[length(chosenDiffs)]
+  last <- chosenDiffs[length(chosenDiffs)] # starting with the last one in the list(closest to the out side of the image, and working in) Right Side
   newLast <- last
+  # See if the next image has a larger or smaller col sum
   compareLeft <- SumsImage[first]
   compareRight <- SumsImage[last]
   middle <- len/2
-  middleMean <- mean(SumsImage[round((middle - 0.2*len)):round((middle + 0.2*len))])
-  if (compareLeft > middleMean) {
+  middleMean <- mean(SumsImage[round((middle - 0.2*len)):round((middle + 0.2*len))]) # catches run up onto the main flat of the colSums
+  #plot to see main flat
+  if (compareLeft > middleMean) { # checking that we aren't on the flat already
     compareLeft = middleMean
   }
-  if (compareRight > middleMean) {
+  if (compareRight > middleMean) { # checking that we aren't on the flat already
     compareRight = middleMean
   }
-  if (first + round(0.2 * len) >= len){
+  if (first + round(0.2 * len) >= len) { # Check that first + 20 perc isn't greater then total length
     index <- len - first - 1
   }
   else {
@@ -360,8 +362,8 @@
       newFirst <- first + j
     }
   }
-  if (last - round(0.2 * len) <= 0){
-    index <- last
+  if (last - round(0.2 * len) <= 0) { # Check that first + 20 perc isn't greater then total length
+    index <- last - 1
   }
   else {
     index <- round(0.2*len)
@@ -374,7 +376,7 @@
   if (returnMat == FALSE) {
   return(list(Start = newFirst, End = newLast))
   }
-  else {
+  else {# returnMat is true (removes the parts of image in those created bounds\)
     ImageNoSides <- list(imageMatrix = processedImage$imageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))],
                           gaussiaMatrix = processedImage$gaussImageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))])
 
@@ -548,7 +550,7 @@
 
 #' Top Image Cut
 #'
-#' returns part of the image that doesn't have any horizontal lines(traces) in,
+#' returns part of the image that doesn't have any horizontal lines (traces) in,
 #' will discard lettering(main use)
 #'
 #' @param imageMatrix Imported image into matrix form, can use tiff_import()
@@ -561,54 +563,71 @@
 #' @return the recommended cutoff of the top of your image
 .top_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL){
   rowsumsImage <- rowSums(imageMatrix)
-  diffImage <- diff(rowsumsImage)
-  StartIndex = vector()
-  Length = vector()
-  foundZero <- FALSE
-  counter <- 0
-  for (i in 1:length(diffImage)) {
-    # last difference is 0 in diffImage
-    if (i == length(diffImage) & diffImage[i] == 0) {
-      if (counter == 0) { #this is the first 0 found in a while
-        Length <- append(Length, 1)
-        StartIndex <- append(StartIndex, i)
-      }
-      else {# this isnt the first 0 found in a while i.e 0,0,0,0,(this one)
-        Length <- append(Length, counter)
-      }
-    }
-    else if (isTRUE(foundZero) & diffImage[i] == 0) { # found another 0 in a row
-      counter <- counter + 1
-    }
-    else if (isTRUE(foundZero)) { #end of the 0 sequence
-      Length <- append(Length, counter)
-      foundZero = FALSE
-      counter = 0
-    }
-    else if (isFALSE(foundZero) & diffImage[i] == 0) { #first 0 found for a new sequence
-      StartIndex <- append(StartIndex, i)
-      foundZero <- TRUE
-      counter <- 1
-    }
-  }
-  zeros <- data.frame(StartIndex = StartIndex, RunLength = Length)
+  zeros <- .find_a_number(rowsumsImage, specNumber = 0)
   peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 50, maxPeakNumber = 4, percentFromEdge = percentFromEdge,
                       plots = FALSE, percentEdgeForLeft = percentEdgeForLeft)
-  startFirstPeak <- peaks$PeakStart[1] # closest peak to the top of the image(because searching as if the image was vertical)
-  longestCut <- sort(zeros$RunLength[which(zeros$StartIndex < startFirstPeak)], decreasing = TRUE)[1] # longest less then the first peak start
+  firstPeak <- peaks$Index[1] # closest peak to the top of the image(because searching as if the image was vertical)
+  longestCut <- sort(zeros$RunLength[which(zeros$StartIndex < firstPeak)], decreasing = TRUE)[1] # longest less then the first peak start
   indexesOfLongestCuts <- zeros$StartIndex[which(zeros$RunLength == longestCut)] # indexes of all points with that run length of 0's
   if (length(indexesOfLongestCuts) > 1) {# more then one found with that run length
     # takes the closest point less than the start of the first peak
-    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < startFirstPeak), decreasing = TRUE)][1]
+    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < firstPeak), decreasing = TRUE)][1]
   }
   else if (length(indexesOfLongestCuts) == 1) {# only one found with that run length
     #takes the only one of that run length
-    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < startFirstPeak), decreasing = TRUE)]
+    topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < firstPeak), decreasing = TRUE)]
   }
   else{# none found with alg, just using top of image
     topCut = 0
   }
   return(topCut)
+}
+
+
+#' Bottom Image Cut
+#'
+#' attempts to find a gap between the traces and timing marks, if found it will
+#'  return the point in which the image can be trimmed removing the timing marks
+#'
+#' @param imageMatrix Imported image into matrix form, can use tiff_import()
+#' @param percentFromEdge used in find_peaks if you know there wont be a peak
+#'  in a region
+#' @param percentEdgeForLeft passed into find peaks, if not specified, uses
+#' percentFromEdge for both left and right sides, if specified, percentFromEdge
+#' is defaulted to just the right side of the plot
+#' @param shortestAlowedSeqOfZeros smallest gap alowed to be found to consider
+#' the trace not intersecting the timing marks
+#'
+#' @return
+.bottom_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL, shortestAlowedSeqOfZeros = 50){
+  rowsumsImage <- rowSums(imageMatrix)
+  zeros <- .find_a_number(rowsumsImage, specNumber = 0)
+  peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 100, maxPeakNumber = 4, percentFromEdge = percentFromEdge,
+                      plots = FALSE, percentEdgeForLeft = percentEdgeForLeft)
+  SecondPeak <- peaks$Index[2]
+  ThirdPeak <- peaks$Index[3]
+
+  longestCut <- sort(zeros$RunLength[which(zeros$StartIndex > SecondPeak & zeros$StartIndex < ThirdPeak)],
+                     decreasing = TRUE)[1] # longest greater then the second peak end less then the third peak start
+  indexesOfLongestCuts <- zeros$StartIndex[which(zeros$RunLength == longestCut)] # indexes of all points with that run length of 0's
+  if (longestCut < shortestAlowedSeqOfZeros) {
+    warning("Intersection in Timing Found")
+    return(length(rowsumsImage))
+  }
+  if (length(indexesOfLongestCuts) > 1) {# more then one found with that run length
+    # takes the takes the closest point to the start of the third peak
+    bottomCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts > SecondPeak & indexesOfLongestCuts < ThirdPeak),
+                                           decreasing = TRUE)][1]
+  }
+  else if (length(indexesOfLongestCuts) == 1) {# only one found with that run length
+    #takes the only one of that run length
+    bottomCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts > SecondPeak & indexesOfLongestCuts < ThirdPeak),
+                                           decreasing = TRUE)]
+  }
+  else{# none found with alg, just using bottom of image (no warning displayed for this one though)
+    bottomCut = 0
+  }
+  return(bottomCut)
 }
 
 
@@ -622,7 +641,7 @@
 #' @param trimAmountBottom Number of pixels
 #'
 #' @return the matrix without the specified bounds
-.trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom){
+.trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom = 50){
   imageProcessed <- image[-c(0:trimAmountTop, (nrow(image) - trimAmountBottom):nrow(image)),]
   return(imageProcessed)
 }
@@ -647,4 +666,50 @@
     imageProcessed <- .not_bright_image(imageMatrix, cutoffQuantile = 0.95)
   }
   return(imageProcessed)
+}
+
+
+#' Find A Specific Number
+#'
+#' Used for finding all sequences of one number in a vector and start indexes
+#' and lengths of each sequence are returned to the user
+#'
+#' @param vector a generic vector of any length
+#' @param specNumber a number that you would like to find all sequences of
+#'
+#' @return vector of all occurances lengths of each sequence and the index of each start
+.find_a_number <- function(vector, specNumber){
+  difference <- diff(vector)
+  StartIndex = vector()
+  Length = vector()
+  foundZero <- FALSE
+  counter <- 0
+
+  for (i in 1:length(difference)) {
+    # last diff is specNumber in difference
+    if (i == length(difference) & difference[i] == specNumber) {
+      if (counter == specNumber) { #this is the first specNumber found in a while
+        Length <- append(Length, 1)
+        StartIndex <- append(StartIndex, i)
+      }
+      else {# this isnt the first specNumber found in a while i.e specNumber,specNumber,specNumber,specNumber,(this one)
+        Length <- append(Length, counter)
+      }
+    }
+    else if (isTRUE(foundZero) & difference[i] == specNumber) { # found another specNumber in a row
+      counter <- counter + 1
+    }
+    else if (isTRUE(foundZero)) { #end of the specNumber sequence
+      Length <- append(Length, counter)
+      foundZero = FALSE
+      counter = specNumber
+    }
+    else if (isFALSE(foundZero) & difference[i] == specNumber) { #first specNumber found for a new sequence
+      StartIndex <- append(StartIndex, i)
+      foundZero <- TRUE
+      counter <- 1
+    }
+  }
+  zeros <- data.frame(StartIndex = StartIndex, RunLength = Length)
+  return(zeros)
 }

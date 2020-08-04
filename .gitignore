@@ -9,3 +9,5 @@ NAMESPACE
 LICENSE
 .Rbuildignore
 magneto.Rproj
+*.Rout
+testingEnv.R

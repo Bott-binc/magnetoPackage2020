@@ -23,10 +23,10 @@ tiff_import <- function(fileName,fileLoc){
   if (isTRUE(tiffCheck) & isTRUE(notEmpty)) {
     return(tiff::readTIFF(paste0(fileLoc,"/",fileName)))
   }
-  else if(!isTRUE(tiffCheck)){
+  else if (!isTRUE(tiffCheck)) {
     return(stop(paste0("file", fileName, " is not a .tif or .tiff" )))
   }
-  else if(!isTRUE(notEmpty)){
+  else if (!isTRUE(notEmpty)) {
     return(stop(paste0("file", fileName, " is 0b/Empty")))
   }
 
