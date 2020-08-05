@@ -194,7 +194,7 @@
     for (j in 1:index) {
       rightSide <- FindingPeaksdf$Index[k] + j
       leftSide <- FindingPeaksdf$Index[k] - j
-      if (j == index){
+      if (j == index) {
         peakStart[k] <- leftSide
         peakEnd[k] <- rightSide
         break
@@ -258,7 +258,8 @@
 #' @param sig Significance parameter, used in dnorm as the final quantile
 #' @param kern.trunc Truncated value for the kernel
 #' @param nw A positive double-precision number, the time-bandwidth parameter
-#' @param cutoffQuantile the quantile that will be a cutoff for image pixels set to 0
+#' @param cutoffQuantile the quantile with respect to what probability
+#' will be the threshold for image pixels to be set to 0
 #'
 #' @return Gaussian matrix scaled for bright
 .not_bright_image <- function(imageMatrix,cutoffQuantile, sig = 10, kern.trunc = 0.05, nw = 3){
@@ -321,9 +322,12 @@
 #' applicable for large peaks
 #' @param returnMat bool, default is to return the image with removed start and end to the user, if FALSE
 #' will return just the index of the start and end
+#' @param maxStart absolute max for the left side of the image (can be overridden with the length)
+#' @param minEnd absolute min for the right side of the image ( can be overridden with the 0)
 #'
 #' @return Image matrix with removed start and end, or the index of these start and ends
-.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20, returnMat = TRUE){
+.get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20,
+                                  returnMat = TRUE, maxStart = 700, minEnd = 4800){
   imageMatrix <- .horizontal_image_check(imageMatrix)
   processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
   SumsImage <- colSums(processedImage$gaussImageMatrix)
@@ -357,22 +361,32 @@
   else {
     index <- round(0.2*len)
   }
+  # for the left side ````````
   for (j in 1:index) {
+    if ( (first + j) > maxStart) {
+      break
+    }
     if (SumsImage[first + j] <= compareLeft + 1 & SumsImage[first + j]  <= middleMean - 3) {
       newFirst <- first + j
     }
   }
+  #``````````````````````````
   if (last - round(0.2 * len) <= 0) { # Check that first + 20 perc isn't greater then total length
     index <- last - 1
   }
   else {
     index <- round(0.2*len)
   }
-  for (k in 1:index) {
+  #for Right Side ````````````
+  for (k in 1:index) { # for the right side
+    if ((last + j) < minEnd) {
+      break
+    }
     if (SumsImage[last - k] <= compareRight + 1 & SumsImage[last - k]  <= middleMean - 3) {
       newLast <- last - k
     }
   }
+  #`````````````````````````
   if (returnMat == FALSE) {
   return(list(Start = newFirst, End = newLast))
   }
@@ -563,7 +577,8 @@
 #' @return the recommended cutoff of the top of your image
 .top_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL){
   rowsumsImage <- rowSums(imageMatrix)
-  zeros <- .find_a_number(rowsumsImage, specNumber = 0)
+  diffRowSumsImage <- diff(rowsumsImage)
+  zeros <- .find_a_number(diffRowSumsImage, specNumber = 0)
   peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 50, maxPeakNumber = 4, percentFromEdge = percentFromEdge,
                       plots = FALSE, percentEdgeForLeft = percentEdgeForLeft)
   firstPeak <- peaks$Index[1] # closest peak to the top of the image(because searching as if the image was vertical)
@@ -578,6 +593,7 @@
     topCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts < firstPeak), decreasing = TRUE)]
   }
   else{# none found with alg, just using top of image
+    warning("No top cuts found.. defaulting to 0")
     topCut = 0
   }
   return(topCut)
@@ -601,7 +617,8 @@
 #' @return
 .bottom_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL, shortestAlowedSeqOfZeros = 50){
   rowsumsImage <- rowSums(imageMatrix)
-  zeros <- .find_a_number(rowsumsImage, specNumber = 0)
+  diffRowSumsImage <- diff(rowsumsImage)
+  zeros <- .find_a_number(diffRowSumsImage, specNumber = 0)
   peaks <- find_peaks(rowSums = rowsumsImage, minDistance = 100, maxPeakNumber = 4, percentFromEdge = percentFromEdge,
                       plots = FALSE, percentEdgeForLeft = percentEdgeForLeft)
   SecondPeak <- peaks$Index[2]
@@ -610,11 +627,15 @@
   longestCut <- sort(zeros$RunLength[which(zeros$StartIndex > SecondPeak & zeros$StartIndex < ThirdPeak)],
                      decreasing = TRUE)[1] # longest greater then the second peak end less then the third peak start
   indexesOfLongestCuts <- zeros$StartIndex[which(zeros$RunLength == longestCut)] # indexes of all points with that run length of 0's
-  if (longestCut < shortestAlowedSeqOfZeros) {
+  if (length(longestCut) == 0 || is.na(longestCut)) {# none found with alg, just using bottom of image (no warning displayed for this one though)
+    warning("No cuts found.. defaulting to bottom of the image")
+    bottomCut = length(rowsumsImage)
+  }
+  else if (longestCut < shortestAlowedSeqOfZeros) {
     warning("Intersection in Timing Found")
     return(length(rowsumsImage))
   }
-  if (length(indexesOfLongestCuts) > 1) {# more then one found with that run length
+  else if (length(indexesOfLongestCuts) > 1) {# more then one found with that run length
     # takes the takes the closest point to the start of the third peak
     bottomCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts > SecondPeak & indexesOfLongestCuts < ThirdPeak),
                                            decreasing = TRUE)][1]
@@ -623,9 +644,6 @@
     #takes the only one of that run length
     bottomCut <- indexesOfLongestCuts[sort(which(indexesOfLongestCuts > SecondPeak & indexesOfLongestCuts < ThirdPeak),
                                            decreasing = TRUE)]
-  }
-  else{# none found with alg, just using bottom of image (no warning displayed for this one though)
-    bottomCut = 0
   }
   return(bottomCut)
 }
@@ -642,9 +660,18 @@
 #'
 #' @return the matrix without the specified bounds
 .trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom = 50){
-  imageProcessed <- image[-c(0:trimAmountTop, (nrow(image) - trimAmountBottom):nrow(image)),]
+  if (trimAmountTop != 0 & trimAmountBottom != 0) {
+    imageProcessed <- image[-c(1:trimAmountTop, (nrow(image) - trimAmountBottom + 1):nrow(image)),]
+  }
+  else if (trimAmountTop != 0) {
+    imageProcessed <- image[-c(1:trimAmountTop),]
+  }
+  else if (trimAmountBottom != 0) {
+    imageProcessed <- image[-c((nrow(image) - trimAmountBottom + 1):nrow(image)),]
+  }
   return(imageProcessed)
 }
+
 
 
 #' Process Image
@@ -657,13 +684,13 @@
 #' @param NADefault The defult value set to points of NA found by the system
 #'
 #' @return The processed image with the gaussian and the non gaussian in an array labeled respectively
-.processImage <- function(imageMatrix, cutoffQuantile, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
+.process_image <- function(imageMatrix, cutoffQuantile = 0.95, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
   bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability, NADefault = NADefault)
   if (bright == TRUE) {
     imageProcessed <- .for_bright_image(imageMatrix)
   }
   if (bright == FALSE) {
-    imageProcessed <- .not_bright_image(imageMatrix, cutoffQuantile = 0.95)
+    imageProcessed <- .not_bright_image(imageMatrix, cutoffQuantile = cutoffQuantile)
   }
   return(imageProcessed)
 }
@@ -677,17 +704,16 @@
 #' @param vector a generic vector of any length
 #' @param specNumber a number that you would like to find all sequences of
 #'
-#' @return vector of all occurances lengths of each sequence and the index of each start
+#' @return vector of all occurrences lengths of each sequence and the index of each start
 .find_a_number <- function(vector, specNumber){
-  difference <- diff(vector)
   StartIndex = vector()
   Length = vector()
   foundZero <- FALSE
   counter <- 0
 
-  for (i in 1:length(difference)) {
-    # last diff is specNumber in difference
-    if (i == length(difference) & difference[i] == specNumber) {
+  for (i in 1:length(vector)) {
+    # last diff is specNumber in vector
+    if (i == length(vector) & vector[i] == specNumber) {
       if (counter == specNumber) { #this is the first specNumber found in a while
         Length <- append(Length, 1)
         StartIndex <- append(StartIndex, i)
@@ -696,7 +722,7 @@
         Length <- append(Length, counter)
       }
     }
-    else if (isTRUE(foundZero) & difference[i] == specNumber) { # found another specNumber in a row
+    else if (isTRUE(foundZero) & vector[i] == specNumber) { # found another specNumber in a row
       counter <- counter + 1
     }
     else if (isTRUE(foundZero)) { #end of the specNumber sequence
@@ -704,7 +730,7 @@
       foundZero = FALSE
       counter = specNumber
     }
-    else if (isFALSE(foundZero) & difference[i] == specNumber) { #first specNumber found for a new sequence
+    else if (isFALSE(foundZero) & vector[i] == specNumber) { #first specNumber found for a new sequence
       StartIndex <- append(StartIndex, i)
       foundZero <- TRUE
       counter <- 1

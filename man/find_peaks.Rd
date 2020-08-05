@@ -9,6 +9,7 @@ find_peaks(
   minDistance,
   maxPeakNumber,
   percentFromEdge,
+  percentEdgeForLeft = NULL,
   minPeakHeight = (0.05 * max(rowSums)),
   plots = TRUE,
   StartEndplotLine = TRUE
@@ -24,6 +25,8 @@ find_peaks(
 \item{percentFromEdge}{Percentage of the picture that you would like removed from edge
 due to an over exposed picture or flares in scanning
 if percentageLeftSide is unspecified uses percentage for both i.e left = 1 - right}
+
+\item{percentEdgeForLeft}{the left percentage that you want to remove(default = NULL)}
 
 \item{minPeakHeight}{minimum peak height required for a peak to be counted
 Default is 5perc of the max(rowSums)}

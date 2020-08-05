@@ -34,30 +34,24 @@ test_that("Correct Error Reported/Correct Warning Reported",{
 })
 
 
-#This code is tested, if need to test again need to change:
 
-#reticulate::source_python("inst/python/finding_peakspy.py") to,
-#reticulate::source_python("~/magneto/inst/python/finding_peakspy.py")
-#NOTE: doing this will make the function not be able to be in the package so
-#must change back after your done testing
-
-# context(desc = "find_peaks")
-# test_that("Correct return given to user", {
-#   rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
-#   expectedRet <- readRDS("~/magneto/tests/testData/FullPeakStartEnd.RDS")
-#   expect_equal(find_peaks(rowSums = rowSums, minDistance = 100, maxPeakNumber = 4,
-#                           percentFromEdge = 10, plots = FALSE), expectedRet)
-# })
-# test_that("Correct Error Reported/Correct Warning Reported", {
-#   rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
-#   rowSumsNoPeaks <- rep(1, 1000)
-#   expect_error(find_peaks("This is not a numeric vector", minDistance = 100, maxPeakNumber = 4,
-#                           percentFromEdge = 10, plots = FALSE),
-#               regexp = "rowSums must be a vector")
-#   expect_error(find_peaks(rowSumsNoPeaks, minDistance = 100, maxPeakNumber = 4,
-#                           percentFromEdge = 10, plots = FALSE),
-#                regexp = "No Peaks Found...")
-# })
+context(desc = "find_peaks")
+test_that("Correct return given to user", {
+  rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
+  expectedRet <- readRDS("~/magneto/tests/testData/FullPeakStartEnd.RDS")
+  expect_equal(find_peaks(rowSums = rowSums, minDistance = 100, maxPeakNumber = 4,
+                          percentFromEdge = 10, plots = FALSE), expectedRet)
+})
+test_that("Correct Error Reported/Correct Warning Reported", {
+  rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
+  rowSumsNoPeaks <- rep(1, 1000)
+  expect_error(find_peaks("This is not a numeric vector", minDistance = 100, maxPeakNumber = 4,
+                          percentFromEdge = 10, plots = FALSE),
+              regexp = "rowSums must be a vector")
+  expect_error(find_peaks(rowSumsNoPeaks, minDistance = 100, maxPeakNumber = 4,
+                          percentFromEdge = 10, plots = FALSE),
+               regexp = "No Peaks Found...")
+})
 
 
 

@@ -9,8 +9,9 @@
   cutPercentage = 1,
   peakThreshold = 5,
   gapAllow = 20,
-  sumColumns = TRUE,
-  returnMat = TRUE
+  returnMat = TRUE,
+  maxStart = 700,
+  minEnd = 4800
 )
 }
 \arguments{
@@ -26,6 +27,10 @@ applicable for large peaks}
 
 \item{returnMat}{bool, default is to return the image with removed start and end to the user, if FALSE
 will return just the index of the start and end}
+
+\item{maxStart}{absolute max for the left side of the image (can be overridden with the length)}
+
+\item{minEnd}{absolute min for the right side of the image ( can be overridden with the 0)}
 }
 \value{
 Image matrix with removed start and end, or the index of these start and ends

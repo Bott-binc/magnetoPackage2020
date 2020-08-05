@@ -15,7 +15,8 @@
 \arguments{
 \item{imageMatrix}{An imported image, can be imported with tiff_import()}
 
-\item{cutoffQuantile}{the quantile that will be a cutoff for image pixels set to 0}
+\item{cutoffQuantile}{the quantile with respect to what probability
+will be the threshold for image pixels to be set to 0}
 
 \item{sig}{Significance parameter, used in dnorm as the final quantile}
 

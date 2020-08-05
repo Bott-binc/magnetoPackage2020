@@ -4,8 +4,8 @@ test_that("returns correct values, checks for percentage i.e. less than 100",{
   ret <- data.frame(leftDist = 20, rightDist = 80)
 
   expect_equal(.allowed_edge_distance(rowSums, percentage = 20), ret)
-  ret2 <- data.frame(leftDist = 20, rightDist = 60)
-  expect_equal(.allowed_edge_distance(rowSums, percentage = 60, percentageLeftSide = 20), ret2)
+  ret2 <- data.frame(leftDist = 20, rightDist = 40)
+  expect_equal(.allowed_edge_distance(rowSums, percentageLeftSide = 20, percentage = 60), ret2)
 
 })
 test_that("returns the correct Error",{
@@ -109,7 +109,7 @@ context(desc = ".not_bright_image")
 test_that("scales correctly with correct return", {
   image <- matrix(c(NA, NA, NA, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),nrow = 4, ncol = 6) #avg 0.45 = 4.5/10
   expected <- readRDS("~/magneto/tests/testData/nonBrightRet.RDS")
-  expect_equal((.not_bright_image(imageMatrix = image)), expected)
+  expect_equal((.not_bright_image(imageMatrix = image, cutoffQuantile = .95)), expected)
 })
 
 
@@ -126,7 +126,81 @@ test_that("scales correctly with correct return", {
 
 context(desc = ".get_trace_start_ends")
 test_that("correctStart and end found for an image",{
-  image <- readRDS("~/magneto/tests/testData/StartEndTest.RDS")
-  expected <- list(200, 6065)
+  image <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
+  expected <- list(Start = 443, End = 5999)
+  expectedFullReturn <- readRDS("~/magneto/tests/testData/StartEndTestFullRet.RDS")
   expect_equal(.get_trace_start_ends(image, returnMat = FALSE), expected)
+  expect_equal(.get_trace_start_ends(image, returnMat = TRUE), expectedFullReturn)
 })
+
+
+
+context(desc = ".top_image_cut")
+test_that("correct top image cuttoff is found",{
+  # WARNING, these images for this set of tests have a lot of pre-processing on it, use testingEnv
+  #if you want to change it These are from batch 5 TODO, 1
+  image <- readRDS("~/magneto/tests/testData/TopImageCut-BottomImageCut.RDS")
+  expected <- 441
+  expect_equal(.top_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1), expected)
+})
+test_that("correct warning returned",{
+  image <- matrix(c(1,0), nrow = 10, ncol = 10)
+  expect_warning(.top_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1),
+                 regexp = "No top cuts found")
+})
+
+
+
+
+context(desc = ".bottom_image_cut")
+test_that("correct bottom image cuttoff is found",{
+  # WARNING, these images for this set of tests have a lot of pre-processing on it, use testingEnv
+  #if you want to change it. These are from batch 5 TODO, 1, 21860, 3069, respectively
+  image <- readRDS("~/magneto/tests/testData/TopImageCut-BottomImageCut.RDS")
+  expected <- 1049
+  expect_equal(.bottom_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1), expected)
+})
+test_that("Correct Warnings returned to user",{
+  imageIntersection <- readRDS("~/magneto/tests/testData/bottomIntersectionFound.RDS")
+  expect_warning(.bottom_image_cut(imageIntersection, percentFromEdge = 1, percentEdgeForLeft = 25),
+                 regexp = "Intersection in Timing Found")
+  noCutImage <- readRDS("~/magneto/tests/testData/bottomNoCut.RDS")#this is a bad image
+  expect_warning(.bottom_image_cut(noCutImage, percentFromEdge = 1, percentEdgeForLeft = 25),
+                 regexp = "No cuts found.. defaulting to bottom of the image")
+})
+
+
+
+context(desc = ".trim_top_bottom")
+test_that("correct trimmed returned to the user",{
+  image <- matrix(1, nrow = 10, ncol = 10)
+  expected6 <- matrix(1, nrow = 6, ncol = 10)
+  expected8 <- matrix(1, nrow = 8, ncol = 10)
+  expect_equal(.trim_top_bottom(image, trimAmountTop = 2, trimAmountBottom = 2), expected6)
+  expect_equal(.trim_top_bottom(image, trimAmountTop = 0, trimAmountBottom = 2), expected8)
+  expect_equal(.trim_top_bottom(image, trimAmountTop = 2, trimAmountBottom = 0), expected8)
+})
+
+
+
+context(desc = ".process_image")
+test_that("correct processed image gets returned to the user",{
+  darkImage <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
+  brightImage <- readRDS("~/magneto/tests/testData/brightImageRAW.RDS")
+  expectedDark <- readRDS("~/magneto/tests/testData/nonBrightExpected.RDS")
+  expectedBright <- readRDS("~/magneto/tests/testData/brightExpected.RDS")
+  expect_equal(.process_image(darkImage), expectedDark)
+  expect_equal(.process_image(brightImage), expectedBright)
+})
+
+
+
+context(desc = ".find_a_number")
+test_that("correct dataframe of indexes and lengths returned", {
+  seq <- c(0,0,0,0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0,0,1,0)
+  expected <- data.frame(StartIndex = c(1,11,19,24), RunLength = c(6,4,4,1))
+  expect_equal(.find_a_number(seq, specNumber = 0), expected)
+})
+
+
+
