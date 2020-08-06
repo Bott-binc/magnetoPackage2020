@@ -254,29 +254,31 @@
 
 #' Non bright image scaling with gaussian deconvolution
 #'
+#' @param Filter a vector specifying the dimensions of the kernel,
+#'  which will be used to perform either delation or erosion, such as c(3,3)
+#' @param method one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
+#' @param threshold should be between 0 and 1 for normalized images
 #' @param imageMatrix An imported image, can be imported with tiff_import()
-#' @param sig Significance parameter, used in dnorm as the final quantile
-#' @param kern.trunc Truncated value for the kernel
-#' @param nw A positive double-precision number, the time-bandwidth parameter
-#' @param cutoffQuantile the quantile with respect to what probability
-#' will be the threshold for image pixels to be set to 0
 #'
 #' @return Gaussian matrix scaled for bright
-.not_bright_image <- function(imageMatrix,cutoffQuantile, sig = 10, kern.trunc = 0.05, nw = 3){
+.not_bright_image <- function(imageMatrix, Filter = c(8,8), method = 'delation', threshold = 0.5){#cutoffQuantile, sig = 10, kern.trunc = 0.05, nw = 3){
   imageMatrix[is.na(imageMatrix)] <- 0
-  gaussImageMatrix <- suppressWarnings(abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) )))
+  Dialation <- OpenImageR::delationErosion(imageMatrix, Filter = Filter, method = method)
+  imageProcessed <- OpenImageR::image_thresholding(Dialation, thresh = threshold)
 
-  imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
-  imageMatrix[imageMatrix > 0] <- 1
-
-  gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
-  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
-  gaussImageMatrix[is.na(gaussImageMatrix)]
-  gaussImageMatrix[gaussImageMatrix < 0] <- 0
-  gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, cutoffQuantile))] <- 0
-  gaussImageMatrix[gaussImageMatrix > 0] <- 1
-  retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
-  return(retdf)
+  # gaussImageMatrix <- suppressWarnings(abs(t( apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 ) )))
+  #
+  # imageMatrix[imageMatrix < (1 - mean(imageMatrix,na.rm = TRUE))] <- 0
+  # imageMatrix[imageMatrix > 0] <- 1
+  #
+  # gaussImageMatrix[0:floor((1/62)*nrow(imageMatrix))] <- mean(gaussImageMatrix)
+  # gaussImageMatrix[(nrow(gaussImageMatrix) - 0.01*nrow(imageMatrix)):(nrow(gaussImageMatrix)),] <- mean(gaussImageMatrix)
+  # gaussImageMatrix[is.na(gaussImageMatrix)]
+  # gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  # gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, cutoffQuantile))] <- 0
+  # gaussImageMatrix[gaussImageMatrix > 0] <- 1
+  # retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
+  return(imageProcessed)
 
 }
 
@@ -291,20 +293,23 @@
 #' @param brightQuantile the quantile that will be a cutoff for image pixels set to 0
 #'
 #' @return Gaussian matrix scaled for bright
-.for_bright_image <- function(imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3, brightQuantile = 0.95){
+.for_bright_image <- function(imageMatrix, Filter = c(13,13), method = 'delation', threshold = 0.8){#imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3, brightQuantile = 0.95){
   imageMatrix[is.na(imageMatrix)] <- 0
-  imageMatrix[imageMatrix < (stats::quantile(imageMatrix, brightQuantile))] <- 0
-  imageMatrix[imageMatrix > 0] <- 1
-  gaussImageMatrix <- abs(t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 )))
-
-  gaussImageMatrix[0:floor((1/20) * nrow(imageMatrix))] <- mean(gaussImageMatrix)
-  gaussImageMatrix[(nrow(gaussImageMatrix) - 0.05 * nrow(imageMatrix)):nrow(gaussImageMatrix), ] <- mean(gaussImageMatrix)
-  gaussImageMatrix[is.na(gaussImageMatrix)]
-  gaussImageMatrix[gaussImageMatrix < 0] <- 0
-  gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, brightQuantile))] <- 0
-  gaussImageMatrix[gaussImageMatrix > 0] <- 1
-  retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
-  return(retdf)
+  Dialation <- OpenImageR::delationErosion(imageMatrix, Filter = Filter, method = method)
+  imageProcessed <- OpenImageR::image_thresholding(Dialation, thresh = threshold)
+  # imageMatrix[is.na(imageMatrix)] <- 0
+  # imageMatrix[imageMatrix < (stats::quantile(imageMatrix, brightQuantile))] <- 0
+  # imageMatrix[imageMatrix > 0] <- 1
+  # gaussImageMatrix <- abs(t(apply(imageMatrix, MARGIN = 1, FUN = deconv_gauss, sig = 10, kern.trunc = 0.05, nw = 3 )))
+  #
+  # gaussImageMatrix[0:floor((1/20) * nrow(imageMatrix))] <- mean(gaussImageMatrix)
+  # gaussImageMatrix[(nrow(gaussImageMatrix) - 0.05 * nrow(imageMatrix)):nrow(gaussImageMatrix), ] <- mean(gaussImageMatrix)
+  # gaussImageMatrix[is.na(gaussImageMatrix)]
+  # gaussImageMatrix[gaussImageMatrix < 0] <- 0
+  # gaussImageMatrix[gaussImageMatrix < (stats::quantile(gaussImageMatrix, brightQuantile))] <- 0
+  # gaussImageMatrix[gaussImageMatrix > 0] <- 1
+  # retdf <- list(imageMatrix = imageMatrix, gaussImageMatrix = gaussImageMatrix)
+  return(imageProcessed)
 }
 
 
@@ -607,14 +612,14 @@
 #'
 #' @param imageMatrix Imported image into matrix form, can use tiff_import()
 #' @param percentFromEdge used in find_peaks if you know there wont be a peak
-#'  in a region
+#' in a region
 #' @param percentEdgeForLeft passed into find peaks, if not specified, uses
 #' percentFromEdge for both left and right sides, if specified, percentFromEdge
 #' is defaulted to just the right side of the plot
 #' @param shortestAlowedSeqOfZeros smallest gap alowed to be found to consider
 #' the trace not intersecting the timing marks
 #'
-#' @return
+#' @return value of bottom cut that should be removed
 .bottom_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL, shortestAlowedSeqOfZeros = 50){
   rowsumsImage <- rowSums(imageMatrix)
   diffRowSumsImage <- diff(rowsumsImage)

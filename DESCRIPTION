@@ -21,6 +21,8 @@ Imports:
     graphics,
     fs,
     multitaper,
-    stats
+    stats,
+    OpenImageR,
+    zoo
 SystemRequirements:
   Python

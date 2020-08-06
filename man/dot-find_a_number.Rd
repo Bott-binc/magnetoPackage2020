@@ -12,7 +12,7 @@
 \item{specNumber}{a number that you would like to find all sequences of}
 }
 \value{
-vector of all occurances lengths of each sequence and the index of each start
+vector of all occurrences lengths of each sequence and the index of each start
 }
 \description{
 Used for finding all sequences of one number in a vector and start indexes
