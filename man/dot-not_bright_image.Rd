@@ -6,23 +6,20 @@
 \usage{
 .not_bright_image(
   imageMatrix,
-  cutoffQuantile,
-  sig = 10,
-  kern.trunc = 0.05,
-  nw = 3
+  Filter = c(8, 8),
+  method = "delation",
+  threshold = 0.5
 )
 }
 \arguments{
 \item{imageMatrix}{An imported image, can be imported with tiff_import()}
 
-\item{cutoffQuantile}{the quantile with respect to what probability
-will be the threshold for image pixels to be set to 0}
+\item{Filter}{a vector specifying the dimensions of the kernel,
+which will be used to perform either delation or erosion, such as c(8,8)}
 
-\item{sig}{Significance parameter, used in dnorm as the final quantile}
+\item{method}{one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)}
 
-\item{kern.trunc}{Truncated value for the kernel}
-
-\item{nw}{A positive double-precision number, the time-bandwidth parameter}
+\item{threshold}{should be between 0 and 1 for normalized images}
 }
 \value{
 Gaussian matrix scaled for bright

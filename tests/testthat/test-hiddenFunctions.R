@@ -107,9 +107,9 @@ test_that("Returns the correct start and ends",{
 
 context(desc = ".not_bright_image")
 test_that("scales correctly with correct return", {
-  image <- matrix(c(NA, NA, NA, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),nrow = 4, ncol = 6) #avg 0.45 = 4.5/10
+  image <- readRDS("~/magneto/tests/testData/nonBrightImage.RDS")
   expected <- readRDS("~/magneto/tests/testData/nonBrightRet.RDS")
-  expect_equal((.not_bright_image(imageMatrix = image, cutoffQuantile = .95)), expected)
+  expect_equal(.not_bright_image(imageMatrix = image), expected)
 })
 
 
@@ -117,9 +117,9 @@ test_that("scales correctly with correct return", {
 
 context(desc = ".for_bright_image")
 test_that("scales correctly with correct return", {
-  image <- matrix(c(NA, NA, NA, 0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9),nrow = 4, ncol = 6) #avg 0.45 = 4.5/10
+  image <- readRDS("~/magneto/tests/testData/brightImageRAW.RDS")
   expected <- readRDS("~/magneto/tests/testData/forBrightnessRet.RDS")
-  expect_equal(suppressWarnings(.for_bright_image(imageMatrix = image)), expected)
+  expect_equal(.for_bright_image(imageMatrix = image), expected)
 })
 
 
@@ -127,7 +127,7 @@ test_that("scales correctly with correct return", {
 context(desc = ".get_trace_start_ends")
 test_that("correctStart and end found for an image",{
   image <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
-  expected <- list(Start = 443, End = 5999)
+  expected <- list(Start = 429, End = 5990)
   expectedFullReturn <- readRDS("~/magneto/tests/testData/StartEndTestFullRet.RDS")
   expect_equal(.get_trace_start_ends(image, returnMat = FALSE), expected)
   expect_equal(.get_trace_start_ends(image, returnMat = TRUE), expectedFullReturn)

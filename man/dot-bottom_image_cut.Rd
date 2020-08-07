@@ -25,7 +25,7 @@ is defaulted to just the right side of the plot}
 the trace not intersecting the timing marks}
 }
 \value{
-
+value of bottom cut that should be removed
 }
 \description{
 attempts to find a gap between the traces and timing marks, if found it will

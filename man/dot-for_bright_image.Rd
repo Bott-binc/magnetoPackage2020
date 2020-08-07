@@ -6,22 +6,20 @@
 \usage{
 .for_bright_image(
   imageMatrix,
-  sig = 10,
-  kern.trunc = 0.05,
-  nw = 3,
-  brightQuantile = 0.95
+  Filter = c(13, 13),
+  method = "delation",
+  threshold = 0.8
 )
 }
 \arguments{
 \item{imageMatrix}{An imported image, can be imported with tiff_import()}
 
-\item{sig}{Significance parameter, used in dnorm as the final quantile}
+\item{Filter}{a vector specifying the dimensions of the kernel,
+which will be used to perform either delation or erosion, such as c(13,13)}
 
-\item{kern.trunc}{Truncated value for the kernel}
+\item{method}{one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)}
 
-\item{nw}{A positive double-precision number, the time-bandwidth parameter}
-
-\item{brightQuantile}{the quantile that will be a cutoff for image pixels set to 0}
+\item{threshold}{should be between 0 and 1 for normalized images}
 }
 \value{
 Gaussian matrix scaled for bright

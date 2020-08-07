@@ -255,7 +255,7 @@
 #' Non bright image scaling with gaussian deconvolution
 #'
 #' @param Filter a vector specifying the dimensions of the kernel,
-#'  which will be used to perform either delation or erosion, such as c(3,3)
+#'  which will be used to perform either delation or erosion, such as c(8,8)
 #' @param method one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
 #' @param threshold should be between 0 and 1 for normalized images
 #' @param imageMatrix An imported image, can be imported with tiff_import()
@@ -286,11 +286,11 @@
 
 #' Bright image scaling to gaussian
 #'
+#' @param Filter a vector specifying the dimensions of the kernel,
+#'  which will be used to perform either delation or erosion, such as c(13,13)
+#' @param method one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
+#' @param threshold should be between 0 and 1 for normalized images
 #' @param imageMatrix An imported image, can be imported with tiff_import()
-#' @param sig Significance parameter, used in dnorm as the final quantile
-#' @param kern.trunc Truncated value for the kernel
-#' @param nw A positive double-precision number, the time-bandwidth parameter
-#' @param brightQuantile the quantile that will be a cutoff for image pixels set to 0
 #'
 #' @return Gaussian matrix scaled for bright
 .for_bright_image <- function(imageMatrix, Filter = c(13,13), method = 'delation', threshold = 0.8){#imageMatrix, sig = 10, kern.trunc = 0.05, nw = 3, brightQuantile = 0.95){
@@ -335,7 +335,7 @@
                                   returnMat = TRUE, maxStart = 700, minEnd = 4800){
   imageMatrix <- .horizontal_image_check(imageMatrix)
   processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
-  SumsImage <- colSums(processedImage$gaussImageMatrix)
+  SumsImage <- colSums(processedImage)
   len <- length(SumsImage)
   diffsColSms <- abs(diff(SumsImage))
   pkThresh <- peakThreshold/100
@@ -396,8 +396,8 @@
   return(list(Start = newFirst, End = newLast))
   }
   else {# returnMat is true (removes the parts of image in those created bounds\)
-    ImageNoSides <- list(imageMatrix = processedImage$imageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))],
-                          gaussiaMatrix = processedImage$gaussImageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))])
+    ImageNoSides <- processedImage[,-c(0:newFirst, newLast:ncol(imageMatrix))]
+                         # gaussiaMatrix = processedImage[,-c(0:newFirst, newLast:ncol(imageMatrix))])
 
     return(ImageNoSides)
   }
@@ -682,20 +682,19 @@
 #' Process Image
 #'
 #' @param imageMatrix Imported image into matrix form, can use tiff_import()
-#' @param cutoffQuantile Used for non bright images: The quantile that will be a cutoff for image pixels set to 0
 #' @param beta0 From logistic regression on what images to be considered bright
 #' @param beta1 From logistic regression on what images to be considered bright
 #' @param cutoffProbability Passed into bright: The probability cut off for the decision of an imageMatrix being bright
 #' @param NADefault The defult value set to points of NA found by the system
 #'
 #' @return The processed image with the gaussian and the non gaussian in an array labeled respectively
-.process_image <- function(imageMatrix, cutoffQuantile = 0.95, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
+.process_image <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
   bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability, NADefault = NADefault)
   if (bright == TRUE) {
     imageProcessed <- .for_bright_image(imageMatrix)
   }
   if (bright == FALSE) {
-    imageProcessed <- .not_bright_image(imageMatrix, cutoffQuantile = cutoffQuantile)
+    imageProcessed <- .not_bright_image(imageMatrix)#, cutoffQuantile = cutoffQuantile)
   }
   return(imageProcessed)
 }

@@ -6,7 +6,6 @@
 \usage{
 .process_image(
   imageMatrix,
-  cutoffQuantile = 0.95,
   beta0 = -2.774327,
   beta1 = 51.91687,
   cutoffProbability = 0.5,
@@ -15,8 +14,6 @@
 }
 \arguments{
 \item{imageMatrix}{Imported image into matrix form, can use tiff_import()}
-
-\item{cutoffQuantile}{Used for non bright images: The quantile that will be a cutoff for image pixels set to 0}
 
 \item{beta0}{From logistic regression on what images to be considered bright}
 
