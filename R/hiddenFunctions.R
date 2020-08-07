@@ -686,15 +686,29 @@
 #' @param beta1 From logistic regression on what images to be considered bright
 #' @param cutoffProbability Passed into bright: The probability cut off for the decision of an imageMatrix being bright
 #' @param NADefault The defult value set to points of NA found by the system
+#' @param methodBright one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
+#' @param methodNonBright should be between 0 and 1 for normalized images Default = 0.5
+#' @param thresholdBright should be between 0 and 1 for normalized images Default = 0.8
+#' @param thresholdNonBright
+#' @param FilterBright Vector specifying the dimensions of the kernel,
+#'  which will be used to perform either delation or erosion, such as c(13,13)
+#' @param FilterNonBright Vector specifying the dimensions of the kernel,
+#'  which will be used to perform either delation or erosion, such as c(8,8)
 #'
 #' @return The processed image with the gaussian and the non gaussian in an array labeled respectively
-.process_image <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5, NADefault = 0){
-  bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability, NADefault = NADefault)
+.process_image <- function(imageMatrix, FilterBright = c(13,13), FilterNonBright = c(8,8), methodBright = "delation",
+                           methodNonBright = "delation", thresholdBright = 0.8, thresholdNonBright = 0.5,
+                           beta0 = -2.774327, beta1 = 51.91687, cutoffProbability = 0.5,
+                           NADefault = 0){
+  bright <- bright(imageMatrix, beta0 = beta0, beta1 = beta1, cutoffProbability = cutoffProbability,
+                   NADefault = NADefault)
   if (bright == TRUE) {
-    imageProcessed <- .for_bright_image(imageMatrix)
+    imageProcessed <- .for_bright_image(imageMatrix, Filter = FilterBright,
+                                        method = methodBright, threshold = thresholdBright)
   }
   if (bright == FALSE) {
-    imageProcessed <- .not_bright_image(imageMatrix)#, cutoffQuantile = cutoffQuantile)
+    imageProcessed <- .not_bright_image(imageMatrix, Filter = FilterNonBright,
+                                        method = methodNonBright, threshold = thresholdNonBright)#, cutoffQuantile = cutoffQuantile)
   }
   return(imageProcessed)
 }
@@ -742,4 +756,82 @@
   }
   zeros <- data.frame(StartIndex = StartIndex, RunLength = Length)
   return(zeros)
+}
+
+
+
+#' Top Envelope
+#'
+#' Top bound for a set of horizontal lines, follows contour of the top line and corrects for un-wanted noise
+#'
+#' @param rolledImage Image that has been put through the .roll_image()
+#' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
+#' @param sepDist how far you want the envelope to be above the line you are tracing
+#'
+#' @return vector of points for a line, in the correct scaling for the rolled image.(can add to to chaneg the scaling)
+.top_env <- function(rolledImage, max_roc = 10, sepDist = 10){
+
+  min_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+    if (sum(x) == 0) {
+      white <- 0
+    }
+    else {
+      white <- min( which(x == 1) )
+    }
+    return(white)
+  })
+
+  #starting at the middle to be safe, will work backwords after
+  foundNonZero <- FALSE
+  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) { # need for loop because need to be able to just back an index
+    x <- min_white[i]
+    #first column or no nonZero column found yet
+    if ( i == 1 || isFALSE(foundNonZero)) {
+      if (min_white[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- min_white[i - 1]
+      diff <- x - oneLess
+      if (diff >= max_roc) { # big change, could be a jump
+        if (diff > 0) { # new point is higher then old point
+          min_white[i] <- min_white[i - 1] + 2 # 2 added to be safe
+        }
+        if (diff < 0) { # new point is below old point, cold be a timing gap
+          min_white[i] <- min_white[i - 1] - 2 # 2 subtracted to be safe
+        }
+      }
+    }
+  }
+
+  # The reverse, the first half of the image
+  foundNonZero <- FALSE
+  for (j in 1:(round(ncol(rolledImage))/2 )) { # need for loop because need to be able to just back an index
+    i <- (round(ncol(rolledImage))/2 + 1) - j
+    x <- min_white[i]
+    #first column or no nonZero column found yet
+    if ( j == 1 || isFALSE(foundNonZero)) {
+      if (min_white[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- min_white[i + 1] # actually more because reverse indexing
+      diff <-  oneLess - x # remember that the picture is reversed aswell, 0 is the top..
+      if (diff >= max_roc) { # big change, could be a jump
+        #browser()
+        if (diff > 0) { # new point is higher then old point (looking at the image)
+          min_white[i] <- min_white[i + 1]
+        }
+        if (diff < 0) { # new point is below old point, cold be a timing gap (lookug at the image)
+          min_white[i] <- min_white[i + 1]
+        }
+      }
+    }
+  }
+  correctedWhite <- nrow(rolledImage) - min_white + sepDist # because image is actually flipped with respect to the matrix
+  return(correctedWhite)
 }
