@@ -203,4 +203,6 @@ test_that("correct dataframe of indexes and lengths returned", {
 })
 
 
-
+#need to try on some more images before deemed to be ready for the unit testing
+#context(desc = ".top_env")
+#test_that("correct line chosen for the top envalope for the image")

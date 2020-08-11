@@ -424,69 +424,62 @@
 #   return(list(topFlats[length(topFlats)], bottomFlats[1]))
 # }
 
-#' Finding Rough Bounds for Two Traces
-#'
-#' @param imageMatrix An imported image, can be imported with tiff_import()
-#' @param FindPeaksdf -- Row Index, Max Height, PeakStart, PeakEnd -- identifies traces by summing rows
-#' @param rowSums Of the imported matrix from original picture
-#' @param max_roc Maximum Rate-of-Change of pixel location column-by-column
-#' @returns
+
+# .find_bounds_2 <- function(imageMatrix, FindPeaksdf, rowSums, max_roc = 20){
+#   #
+#   #  FindPeaksdf -- Row Index of "peak", Max Height of "peak", PeakStart/PeakEnd - which are the edges
+#   #  of the ACTUAL spikey bit of the peak, not the overall mountain shape
+#   #
 #
-.find_bounds_2 <- function(imageMatrix, FindPeaksdf, rowSums, max_roc = 20){
-  #
-  #  FindPeaksdf -- Row Index of "peak", Max Height of "peak", PeakStart/PeakEnd - which are the edges
-  #  of the ACTUAL spikey bit of the peak, not the overall mountain shape
-  #
-
-  # what if there ARE no white pixels ... what happens?
-  # subset to imageMatrix[, first_col_that_has_white:last_col_that_has_white]
-
-
-  #########################################################################
-  ##
-  ## Upper bound, trace 1  (upper = top of image)
-
-  # First white pixel per column
-  min_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    min( which(x == 1) )
-  })
-
-  # Some are text and artifacts
-  d_e <- diff(min_white)
-  bad_text <- which(abs(d_e) >= max_roc)  # need to check here
-
-  # Instead, jump to other side of these ... then find the first white going down
-  min_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
-    first_white <- min( which(x == 1) )
-    bottom_first <- min( which(x[(first_white + 1):length(x)] == 0) )
-    min( which( x[(bottom_first + 1):length(x)] == 1 ) )
-  })
-  min_white[bad_text] <- min_white_fix
-
-  ############################################################################
-  ##
-  ## Lower bound, trace 4? (lower = bottom of image)
-
-  # Last white pixel per column
-  max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-    max( which(x == 1) )
-  })
-
-  # Some are text and artifacts
-  d_e <- diff(max_white)
-  bad_text <- which(abs(d_e) >= max_roc)  # need to check bad_text for length > 1
-
-  # Instead, jump to other side of these ... then find the first white going down
-  max_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
-    last_white <- max( which(x == 1) )
-    bottom_black <- max( which(x[1:(last_white - 1)] == 0) )
-    max( which( x[1:(bottom_black - 1)] == 1 ) )
-  })
-  max_white[bad_text] <- max_white_fix
-
-  # fix the bound indexes to make sense?
-  return(list(top_bound = min_white, bottom_bound = max_white))
-}
+#   # what if there ARE no white pixels ... what happens?
+#   # subset to imageMatrix[, first_col_that_has_white:last_col_that_has_white]
+#
+#
+#   #########################################################################
+#   ##
+#   ## Upper bound, trace 1  (upper = top of image)
+#
+#   # First white pixel per column
+#   min_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
+#     min( which(x == 1) )
+#   })
+#
+#   # Some are text and artifacts
+#   d_e <- diff(min_white)
+#   bad_text <- which(abs(d_e) >= max_roc)  # need to check here
+#
+#   # Instead, jump to other side of these ... then find the first white going down
+#   min_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
+#     first_white <- min( which(x == 1) )
+#     bottom_first <- min( which(x[(first_white + 1):length(x)] == 0) )
+#     min( which( x[(bottom_first + 1):length(x)] == 1 ) )
+#   })
+#   min_white[bad_text] <- min_white_fix
+#
+#   ############################################################################
+#   ##
+#   ## Lower bound, trace 4? (lower = bottom of image)
+#
+#   # Last white pixel per column
+#   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
+#     max( which(x == 1) )
+#   })
+#
+#   # Some are text and artifacts
+#   d_e <- diff(max_white)
+#   bad_text <- which(abs(d_e) >= max_roc)  # need to check bad_text for length > 1
+#
+#   # Instead, jump to other side of these ... then find the first white going down
+#   max_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
+#     last_white <- max( which(x == 1) )
+#     bottom_black <- max( which(x[1:(last_white - 1)] == 0) )
+#     max( which( x[1:(bottom_black - 1)] == 1 ) )
+#   })
+#   max_white[bad_text] <- max_white_fix
+#
+#   # fix the bound indexes to make sense?
+#   return(list(top_bound = min_white, bottom_bound = max_white))
+# }
 
 
 #
@@ -768,8 +761,9 @@
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be above the line you are tracing
 #'
-#' @return vector of points for a line, in the correct scaling for the rolled image.(can add to to chaneg the scaling)
-.top_env <- function(rolledImage, max_roc = 10, sepDist = 10){
+#' @return vector of points for a line, in the correct scaling for the rolled image.
+#' can add to to chaneg the scaling: nrow(imageMatrix) - bottomcut + topEnvelope
+.top_env <- function(rolledImage, max_roc = 25, sepDist = 10){
 
   min_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
     if (sum(x) == 0) {
@@ -795,12 +789,12 @@
     else if (isTRUE(foundNonZero)) {
       oneLess <- min_white[i - 1]
       diff <- x - oneLess
-      if (diff >= max_roc) { # big change, could be a jump
+      if (abs(diff) >= max_roc) { # big change, could be a jump
         if (diff > 0) { # new point is higher then old point
-          min_white[i] <- min_white[i - 1] + 2 # 2 added to be safe
+          min_white[i] <- min_white[i - 1]
         }
         if (diff < 0) { # new point is below old point, cold be a timing gap
-          min_white[i] <- min_white[i - 1] - 2 # 2 subtracted to be safe
+          min_white[i] <- min_white[i - 1]
         }
       }
     }
@@ -820,18 +814,95 @@
     # a non zero column is found
     else if (isTRUE(foundNonZero)) {
       oneLess <- min_white[i + 1] # actually more because reverse indexing
-      diff <-  oneLess - x # remember that the picture is reversed aswell, 0 is the top..
-      if (diff >= max_roc) { # big change, could be a jump
+      diff <-  oneLess - x # remember that the picture is reversed as well, 0 is the top..
+      if (abs(diff) >= max_roc) { # big change, could be a jump
         #browser()
         if (diff > 0) { # new point is higher then old point (looking at the image)
           min_white[i] <- min_white[i + 1]
         }
-        if (diff < 0) { # new point is below old point, cold be a timing gap (lookug at the image)
+        if (diff < 0) { # new point is below old point, could be a timing gap (looking at the image)
           min_white[i] <- min_white[i + 1]
         }
       }
     }
   }
   correctedWhite <- nrow(rolledImage) - min_white + sepDist # because image is actually flipped with respect to the matrix
+  return(correctedWhite)
+}
+
+
+#' Bottom Envelope
+#'
+#' Bottom bound for a set of horizontal lines, follows contour of the top line and corrects for un-wanted noise
+#'
+#' @param rolledImage Image that has been put through the .roll_image()
+#' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
+#' @param sepDist how far you want the envelope to be below the line you are tracing
+#'
+#' @return vector of points for a line, in the correct scaling for the rolled image.
+#' can do nrow(imageMatrix) - bottomcut + topEnvelope change the scaling
+.bottom_env <- function(rolledImage, max_roc = 25, sepDist = 10){
+  max_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+    if (sum(x) == 0) {
+      white <- 0
+    }
+    else {
+      white <- max( which(x == 1) )
+    }
+    return(white)
+  })
+
+  #starting at the middle to be safe, will work backwards after
+  foundNonZero <- FALSE
+  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) { # need for loop because need to be able to just back an index
+    x <- max_white[i]
+    #first column or no nonZero column found yet
+    if ( i == 1 || isFALSE(foundNonZero)) {
+      if (max_white[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- max_white[i - 1]
+      diff <- x - oneLess
+      if (abs(diff) >= max_roc) { # big change, could be a jump
+        if (diff > 0) { # new point is higher then old point
+          max_white[i] <- max_white[i - 1]
+        }
+        if (diff < 0) { # new point is below old point, cold be a timing gap
+          max_white[i] <- max_white[i - 1]
+        }
+      }
+    }
+  }
+
+  # The reverse, the first half of the image
+  foundNonZero <- FALSE
+  for (j in 1:(round(ncol(rolledImage))/2 )) { # need for loop because need to be able to just back an index
+    i <- (round(ncol(rolledImage))/2 + 1) - j
+    x <- max_white[i]
+    #first column or no nonZero column found yet
+    if ( j == 1 || isFALSE(foundNonZero)) {
+      if (max_white[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- max_white[i + 1] # actually more because reverse indexing
+      diff <-  oneLess - x # remember that the picture is reversed aswell, 0 is the top..
+      if (abs(diff) >= max_roc) { # big change, could be a jump
+        #browser()
+        if (diff > 0) { # new point is higher then old point (looking at the image)
+          max_white[i] <- max_white[i + 1]
+        }
+        if (diff < 0) { # new point is below old point, could be a timing gap (lookug at the image)
+          max_white[i] <- max_white[i + 1]
+        }
+      }
+    }
+  }
+  correctedWhite <- nrow(rolledImage) - max_white - sepDist # because image is actually flipped with respect to the matrix
   return(correctedWhite)
 }
