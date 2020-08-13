@@ -369,9 +369,10 @@
   # for the left side ````````
   for (j in 1:index) {
     if ( (first + j) > maxStart) {
+      newFirst <- maxStart
       break
     }
-    if (SumsImage[first + j] <= compareLeft + 1 & SumsImage[first + j]  <= middleMean - 3) {
+    else if (SumsImage[first + j] <= compareLeft + 1 & SumsImage[first + j]  <= middleMean - 3) {
       newFirst <- first + j
     }
   }
@@ -385,6 +386,7 @@
   #for Right Side ````````````
   for (k in 1:index) { # for the right side
     if ((last + j) < minEnd) {
+      newLast <- minEnd
       break
     }
     if (SumsImage[last - k] <= compareRight + 1 & SumsImage[last - k]  <= middleMean - 3) {
@@ -396,7 +398,7 @@
   return(list(Start = newFirst, End = newLast))
   }
   else {# returnMat is true (removes the parts of image in those created bounds\)
-    ImageNoSides <- processedImage[,-c(0:newFirst, newLast:ncol(imageMatrix))]
+    ImageNoSides <- imageMatrix[,-c(0:newFirst, newLast:ncol(imageMatrix))]
                          # gaussiaMatrix = processedImage[,-c(0:newFirst, newLast:ncol(imageMatrix))])
 
     return(ImageNoSides)
@@ -762,153 +764,97 @@
 #' @param sepDist how far you want the envelope to be above the line you are tracing
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
-#' can add to to change the scaling: nrow(imageMatrix) - bottomcut + topEnvelope
-.top_env <- function(rolledImage, max_roc = 25, sepDist = 10){
+#' can add to to change the scaling: nrow(imageMatrix) - bottomcut + Envelope
+.top_env <- function(rolledImage, max_roc = 25, sepDist = 10, maxNoise = 100){
 
-  min_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+  topWhite <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
     if (sum(x) == 0) {
       white <- 0
     }
     else {
-      white <- min( which(x == 1) )
+      white <- min( which(x == 1) ) # actually the top of the image
     }
     return(white)
   })
 
-  #starting at the middle to be safe, will work backwords after
-  foundNonZero <- FALSE
-  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) { # need for loop because need to be able to just back an index
-    x <- min_white[i]
-    #first column or no nonZero column found yet
-    if ( i == 1 || isFALSE(foundNonZero)) {
-      if (min_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- min_white[i - 1]
-      diff <- x - oneLess
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        if (diff > 0) { # new point is higher then old point
-          min_white[i] <- min_white[i - 1]
-        }
-        if (diff < 0) { # new point is below old point, cold be a timing gap
-          min_white[i] <- min_white[i - 1]
-        }
-      }
-    }
-  }
-
-  # The reverse, the first half of the image
-  foundNonZero <- FALSE
-  for (j in 1:(round(ncol(rolledImage))/2 )) { # need for loop because need to be able to just back an index
-    i <- (round(ncol(rolledImage))/2 + 1) - j
-    x <- min_white[i]
-    #first column or no nonZero column found yet
-    if ( j == 1 || isFALSE(foundNonZero)) {
-      if (min_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- min_white[i + 1] # actually more because reverse indexing
-      diff <-  oneLess - x # remember that the picture is reversed as well, 0 is the top..
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        #browser()
-        if (diff > 0) { # new point is higher then old point (looking at the image)
-          min_white[i] <- min_white[i + 1]
-        }
-        if (diff < 0) { # new point is below old point, could be a timing gap (looking at the image)
-          min_white[i] <- min_white[i + 1]
-        }
-      }
-    }
-  }
-  correctedWhite <- nrow(rolledImage) - min_white + sepDist # because image is actually flipped with respect to the matrix
-  return(correctedWhite)
+  env <- .envelope_creation(rolledImage = rolledImage, chosenRoughBound = topWhite,
+                            max_roc = max_roc, sepDist = sepDist, topOfLine = TRUE,
+                            maxNoise = maxNoise)
+  return(env)
 }
 
 
-#' Top Trace lower Envelope
+#' Bottom of Top Trace Envelope
 #'
 #' Bottom bound for the top trace , follows contour of the top line and corrects
 #'  for un-wanted noise
 #'
 #' @param rolledImage Image that has been put through the .roll_image()
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
-#' @param sepDist how far you want the envelope to be above the line you are tracing
+#' @param sepDist how far you want the envelope to be below the line you are tracing
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
-#' can add to to change the scaling: nrow(imageMatrix) - bottomcut + topEnvelope
-.top_lower_env <- function(rolledImage, max_roc = 25, sepDist = 10){
-  max_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+#' can add to to change the scaling: nrow(imageMatrix) - bottomcut + Envelope
+.top_lower_env <- function(rolledImage, max_roc = 25, sepDist = 10, maxNoise = 100){
+  firstblack <- apply(rolledImage, MARGIN = 2, FUN = function(x) { #bottom of the first trace
     if (sum(x) == 0) {
       chosenBottom <- 0
     }
     else {
       minWhite <- min( which(x == 1) )
       black <- which(x == 0)
-      chosenBottom <- min(black[which(black > minWhite)])
+      possibleChoices <- which(black > minWhite)
+      if (length(possibleChoices) != 0) {
+        chosenBottom <- min(black[which(black > minWhite)])
+      }
+      else {
+        chosenBottom <- 0
+      }
+    }
+
+    return(chosenBottom)
+  })
+  env <- .envelope_creation(rolledImage = rolledImage, chosenRoughBound = firstblack,
+                            max_roc = max_roc, sepDist = sepDist, topOfLine = FALSE,
+                            maxNoise = maxNoise)
+  return(env)
+}
+
+
+
+#' Top of Second Trace Envelope
+#'
+#' @param rolledImage Image that has been put through the .roll_image()
+#' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
+#' @param sepDist how far you want the envelope to be above the line you are tracing
+#'
+#' @return vector of points for a line, in the correct scaling for the rolled image.
+#' can do nrow(imageMatrix) - bottomcut + Envelope change the scaling
+.bottom_upper_env <- function(rolledImage, max_roc = 25, sepDist = 10, maxNoise = 100){
+  topSecondTrace <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+    if (sum(x) == 0) {
+      chosenBottom <- 0
+    }
+    else {
+      maxWhite <- max( which(x == 1) )
+      black <- which(x == 0)
+      possibleChoices <- which(black < maxWhite)
+      if (length(possibleChoices) == 0) {
+        chosenBottom  <- 0
+      }
+      else {
+      chosenBottom <- max(black[which(black < maxWhite)])
+      }
     }
     return(chosenBottom)
   })
-
-  #starting at the middle to be safe, will work backwards after
-  foundNonZero <- FALSE
-  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) { # need for loop because need to be able to just back an index
-    x <- max_white[i]
-    #first column or no nonZero column found yet
-    if ( i == 1 || isFALSE(foundNonZero)) {
-      if (max_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- max_white[i - 1]
-      diff <- x - oneLess
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        if (diff > 0) { # new point is higher then old point
-          max_white[i] <- max_white[i - 1]
-        }
-        if (diff < 0) { # new point is below old point, cold be a timing gap
-          max_white[i] <- max_white[i - 1]
-        }
-      }
-    }
-  }
-
-  # The reverse, the first half of the image
-  foundNonZero <- FALSE
-  for (j in 1:(round(ncol(rolledImage))/2 )) { # need for loop because need to be able to just back an index
-    i <- (round(ncol(rolledImage))/2 + 1) - j
-    x <- max_white[i]
-    #first column or no nonZero column found yet
-    if ( j == 1 || isFALSE(foundNonZero)) {
-      if (max_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- max_white[i + 1] # actually more because reverse indexing
-      diff <-  oneLess - x # remember that the picture is reversed aswell, 0 is the top..
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        #browser()
-        if (diff > 0) { # new point is higher then old point (looking at the image)
-          max_white[i] <- max_white[i + 1]
-        }
-        if (diff < 0) { # new point is below old point, could be a timing gap (lookug at the image)
-          max_white[i] <- max_white[i + 1]
-        }
-      }
-    }
-  }
-  correctedWhite <- nrow(rolledImage) - max_white - sepDist # because image is actually flipped with respect to the matrix
-  return(correctedWhite)
+  env <- .envelope_creation(rolledImage = rolledImage, chosenRoughBound = topSecondTrace,
+                            max_roc = max_roc, sepDist = sepDist, topOfLine = TRUE,
+                            maxNoise = maxNoise)
+  return(env)
 }
+
+
 
 #' Bottom Envelope
 #'
@@ -919,9 +865,9 @@
 #' @param sepDist how far you want the envelope to be below the line you are tracing
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
-#' can do nrow(imageMatrix) - bottomcut + topEnvelope change the scaling
-.bottom_env <- function(rolledImage, max_roc = 25, sepDist = 10){
-  max_white <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
+#' can do nrow(imageMatrix) - bottomcut + Envelope change the scaling
+.bottom_env <- function(rolledImage, max_roc = 25, sepDist = 10, maxNoise = 100){
+  bottomSecondTrace <- apply(rolledImage, MARGIN = 2, FUN = function(x) {
     if (sum(x) == 0) {
       white <- 0
     }
@@ -930,61 +876,103 @@
     }
     return(white)
   })
-
-  #starting at the middle to be safe, will work backwards after
-  foundNonZero <- FALSE
-  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) { # need for loop because need to be able to just back an index
-    x <- max_white[i]
-    #first column or no nonZero column found yet
-    if ( i == 1 || isFALSE(foundNonZero)) {
-      if (max_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- max_white[i - 1]
-      diff <- x - oneLess
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        if (diff > 0) { # new point is higher then old point
-          max_white[i] <- max_white[i - 1]
-        }
-        if (diff < 0) { # new point is below old point, cold be a timing gap
-          max_white[i] <- max_white[i - 1]
-        }
-      }
-    }
-  }
-
-  # The reverse, the first half of the image
-  foundNonZero <- FALSE
-  for (j in 1:(round(ncol(rolledImage))/2 )) { # need for loop because need to be able to just back an index
-    i <- (round(ncol(rolledImage))/2 + 1) - j
-    x <- max_white[i]
-    #first column or no nonZero column found yet
-    if ( j == 1 || isFALSE(foundNonZero)) {
-      if (max_white[i] != 0) {
-        foundNonZero <- TRUE
-      }
-    }
-    # a non zero column is found
-    else if (isTRUE(foundNonZero)) {
-      oneLess <- max_white[i + 1] # actually more because reverse indexing
-      diff <-  oneLess - x # remember that the picture is reversed aswell, 0 is the top..
-      if (abs(diff) >= max_roc) { # big change, could be a jump
-        #browser()
-        if (diff > 0) { # new point is higher then old point (looking at the image)
-          max_white[i] <- max_white[i + 1]
-        }
-        if (diff < 0) { # new point is below old point, could be a timing gap (lookug at the image)
-          max_white[i] <- max_white[i + 1]
-        }
-      }
-    }
-  }
-  correctedWhite <- nrow(rolledImage) - max_white - sepDist # because image is actually flipped with respect to the matrix
-  return(correctedWhite)
+  env <- .envelope_creation(rolledImage = rolledImage, chosenRoughBound = bottomSecondTrace,
+                     max_roc = max_roc, sepDist = sepDist, topOfLine = FALSE,maxNoise = maxNoise )
+  return(env)
 }
 
 
 
+#' Envelope Creation For a Trace
+#'
+#' Takes a rough est for the envelope and removes any unwanted noise
+#'
+#' @param rolledImage Image that has been put through the .roll_image()
+#' @param chosenRoughBound vector of the rough bound (use apply on the columns)
+#' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
+#' @param sepDist how far you want the envelope to be below the line you are tracing
+#' @param topOfLine bool, if you are tracing the top of the bottom of the line
+#'
+#' @return corected bound for the envelope
+.envelope_creation <- function(rolledImage, chosenRoughBound, max_roc = 25, sepDist = 20, topOfLine = TRUE, maxNoise = 100){
+  newBound <- chosenRoughBound
+  foundNonZero <- FALSE
+  counterRight <- 0
+  counterLeft <- 0
+  #browser()
+  #second half of image
+  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) {
+    x <- newBound[i]
+    #first column or no nonZero column found yet
+    if ( i == 1 || isFALSE(foundNonZero)) {
+      if (newBound[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- newBound[i - 1]
+      diff <- x - oneLess
+      if (abs(diff) >= max_roc) { # big change, could be a jump
+        #browser()
+        newBound[i] <- newBound[i - 1]
+        counterRight <- counterRight + 1
+      }
+      else if (abs(diff) < max_roc & counterRight != 0) { # reset counter if back on the line
+        #browser()
+        counterRight = 0
+      }
+      if (counterRight == maxNoise) { # how long it can create new points before correcting
+        #browser()
+        newBound[i] <- chosenRoughBound[i] # brings back to the next point in the series
+        for (k in 0:counterRight + 1) {
+          #browser()
+          newBound[i - k] <- chosenRoughBound[i]
+        }
+        counterRight <- 0
+      }
+    }
+  }
+  foundNonZero <- FALSE
+  #first half of image
+  for (j in 1:(round(ncol(rolledImage))/2 )) {
+    i <- (round(ncol(rolledImage))/2 + 1) - j
+    x <- newBound[i]
+    #first column or no nonZero column found yet
+    if ( j == 1 || isFALSE(foundNonZero)) {
+      if (newBound[i] != 0) {
+        foundNonZero <- TRUE
+      }
+    }
+    # a non zero column is found
+    else if (isTRUE(foundNonZero)) {
+      oneLess <- newBound[i + 1] # actually more because reverse indexing
+      diff <-  oneLess - x # remember that the picture is reversed as well, 0 is the top..
+      if (abs(diff) >= max_roc) { # big change, could be a jump
+        #browser()
+        newBound[i] <- newBound[i + 1]
+        counterLeft <- counterLeft + 1
+      }
+      else if (abs(diff) < max_roc & counterLeft != 0) { # reset counter if back on the line
+        #rowser()
+        counterLeft = 0
+      }
+      if (counterLeft == maxNoise) { # how long it can create new points before correcting
+        #browser()
+        newBound[i] <- chosenRoughBound[i] # brings back to the next point in the series
+        for (k in 0:counterLeft + 1) {
+          #browser()
+          newBound[i + k] <- chosenRoughBound[i]
+        }
+        counterLeft <- 0
+      }
+    }
+  }
+  if (isTRUE(topOfLine)) {
+    correctedWhite <- nrow(rolledImage) - newBound + sepDist
+  }
+  else{# running on the bottom of the image
+    correctedWhite <- nrow(rolledImage) - newBound - sepDist
+  }
+  return(correctedWhite)
+}
