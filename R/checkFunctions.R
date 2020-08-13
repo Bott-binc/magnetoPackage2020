@@ -115,3 +115,35 @@ not_empty_file <- function(filePath, fileName){
 #     return(running)
 #   }
 # }
+
+
+
+#' Triple Trace Checking
+#'
+#' Using find_peaks, checks for three traces at the bottom with the same length
+#'
+#' @param imageMatrix Horizontal image processed
+#' @param minDistance The min distance aloud between found peaks
+#' @param percentFromEdge the distance alous from the edge of the image
+#' @param threshold how close the last three peaks have to be in height +-
+#'
+#' @return TRUE or FALSE for finding a triple or not
+.triple_check <- function(imageMatrix, minDistance = 50, percentFromEdge = 2, threshold = 200){
+  sums <- rowSums(imageMatrix)
+  tripleCheck <- find_peaks(sums, minDistance = minDistance, maxPeakNumber = 6,
+                            percentFromEdge = percentFromEdge, plots = FALSE)
+
+  if (length(tripleCheck$Index) == 6) { # possible a triple so we check weather
+    #the timing peaks are close together in heights
+    #this can be an indication that there are possibly three traces on the image
+    if (tripleCheck$Height[5] - threshold <= tripleCheck$Height[4] &
+        tripleCheck$Height[4] <= tripleCheck$Height[5] + threshold &
+        tripleCheck$Height[5] - threshold <= tripleCheck$Height[6] &
+        tripleCheck$Height[6] <= tripleCheck$Height[5] + threshold) {
+      return(TRUE)
+    }
+    else {
+      return(FALSE)
+    }
+  }
+}

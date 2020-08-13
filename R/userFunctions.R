@@ -190,5 +190,53 @@ find_paths_for_keyword <- function(path = "~/", keyword){
 #
 # }
 
+#' Title
+#'
+#' @param imageName The name of the file
+#' @param file_loc the path from ~/ to the dir where the file is
+#' @param trimAmountTop Number of pixels off of top of image (usually for common flares)
+#' @param trimAmountBottom Number of pixels off of bottom of image
+#' @param beta0 The intercept of a logistic regression default is for magnetograms
+#' @param beta1 The slope of the logistic regression default is for magnetograms
+#' @param cutoffProbability The probability cut off for the decision of an imageMatrix being bright
+#' @param NADefault The default value set to NA's found in the matrix
+#' @param FilterBright Vector specifying the dimensions of the kernel,
+#' which will be used to perform either delation or erosion, such as c(13,13)
+#' @param FilterNonBright Vector specifying the dimensions of the kernel,
+#' which will be used to perform either delation or erosion, such as c(8,8)
+#' @param methodBright one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
+#' @param methodNonBright one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
+#' @param thresholdBright should be between 0 and 1 for normalized images Default = 0.8
+#' @param thresholdNonBright should be between 0 and 1 for normalized images Default = 0.5
+#'
+#' @return imageMatrix processed and trimed, in landscape orientation
+#' @export
+import_process_image <- function(imageName, file_loc, trimAmountTop = 100,
+                                 trimAmountBottom = 50, beta0 = -2.774327,
+                                 beta1 = 51.91687, cutoffProbability = 0.5,
+                                 NADefault = 0, FilterBright = c(13, 13),
+                                 FilterNonBright = c(8, 8),
+                                 methodBright = "delation",
+                                 methodNonBright = "delation",
+                                 thresholdBright = 0.8,
+                                 thresholdNonBright = 0.5){
 
+
+  imageRAW <- tiff_import(fileName = imageName, fileLoc = file_loc)
+  image <- .horizontal_image_check(imageRAW)
+  imagecut <- .trim_top_bottom(image,
+                               trimAmountTop = 100,
+                               trimAmountBottom = 50) #takes off the usual flair spots
+  imageMatrix <- .process_image(imagecut,
+                                cutoffProbability = cutoffProbability,
+                                NADefault = NADefault,
+                                beta1 = beta1, beta0 = beta0,
+                                FilterBright = FilterBright,
+                                FilterNonBright = FilterNonBright,
+                                methodBright = methodBright,
+                                methodNonBright = methodNonBright,
+                                thresholdBright = thresholdBright,
+                                thresholdNonBright = thresholdNonBright) # checks bright and processes returns processed
+  return(imageMatrix)
+}
 

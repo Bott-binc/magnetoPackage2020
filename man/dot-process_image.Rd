@@ -6,6 +6,12 @@
 \usage{
 .process_image(
   imageMatrix,
+  FilterBright = c(13, 13),
+  FilterNonBright = c(8, 8),
+  methodBright = "delation",
+  methodNonBright = "delation",
+  thresholdBright = 0.8,
+  thresholdNonBright = 0.5,
   beta0 = -2.774327,
   beta1 = 51.91687,
   cutoffProbability = 0.5,
@@ -14,6 +20,20 @@
 }
 \arguments{
 \item{imageMatrix}{Imported image into matrix form, can use tiff_import()}
+
+\item{FilterBright}{Vector specifying the dimensions of the kernel,
+which will be used to perform either delation or erosion, such as c(13,13)}
+
+\item{FilterNonBright}{Vector specifying the dimensions of the kernel,
+which will be used to perform either delation or erosion, such as c(8,8)}
+
+\item{methodBright}{one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)}
+
+\item{methodNonBright}{one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)}
+
+\item{thresholdBright}{should be between 0 and 1 for normalized images Default = 0.8}
+
+\item{thresholdNonBright}{should be between 0 and 1 for normalized images Default = 0.5}
 
 \item{beta0}{From logistic regression on what images to be considered bright}
 

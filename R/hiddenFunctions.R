@@ -682,9 +682,9 @@
 #' @param cutoffProbability Passed into bright: The probability cut off for the decision of an imageMatrix being bright
 #' @param NADefault The defult value set to points of NA found by the system
 #' @param methodBright one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
-#' @param methodNonBright should be between 0 and 1 for normalized images Default = 0.5
+#' @param methodNonBright one of 'delation'(adds to image, making brights brighter), 'erosion' (subtracts from image brights darker)
 #' @param thresholdBright should be between 0 and 1 for normalized images Default = 0.8
-#' @param thresholdNonBright
+#' @param thresholdNonBright should be between 0 and 1 for normalized images Default = 0.5
 #' @param FilterBright Vector specifying the dimensions of the kernel,
 #'  which will be used to perform either delation or erosion, such as c(13,13)
 #' @param FilterNonBright Vector specifying the dimensions of the kernel,
