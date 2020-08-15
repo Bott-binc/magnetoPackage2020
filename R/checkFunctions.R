@@ -146,7 +146,7 @@ not_empty_file <- function(filePath, fileName){
       if (tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[4] &
           tripleCheck$Index[4] <= tripleCheck$Index[5] + thresholdDistance &
           tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[6] &
-          tripleCheck$Index[6] <= tripleCheck$Index[5] + thresholdDistance){
+          tripleCheck$Index[6] <= tripleCheck$Index[5] + thresholdDistance) {
         return(TRUE)
       }
       else{# to far apart
@@ -157,4 +157,31 @@ not_empty_file <- function(filePath, fileName){
       return(FALSE)
     }
   }
+}
+
+
+
+#' Intersection Check
+#'
+#' Takes to envelope lines and checks to see if the lower is higher then the
+#' upper
+#'
+#' @param topEnv The top envelope of the comparison
+#' @param bottomEnv The bottom envelope of the comparison
+#' @param imageName Name of the image for the warning if cross
+#' @param rmAmount How much to ignore near the edges for intersecton,
+#' this is taking off of both sides
+#'
+#' @return warning if
+#' @export
+#'
+#' @examples
+.intersection_check <- function(topEnv, bottomEnv, imageName, rmAmount = 300){
+  for (m in 300:(min(c(length(bottomEnv), length(topEnv))) - 300)) { #Checking for intersection between the two lines
+    if (topEnv[m] <= bottomEnv[m]) {
+      return(warning(paste0("There is an intersection at (", topEnv[m], ", ", m, ")")))
+
+    }
+  }
+  return(FALSE) # there is no intersection in the bounds
 }

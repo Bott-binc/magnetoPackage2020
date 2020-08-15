@@ -762,6 +762,7 @@
 #' @param rolledImage Image that has been put through the .roll_image()
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be above the line you are tracing
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
 #' can add to to change the scaling: nrow(imageMatrix) - bottomcut + Envelope
@@ -792,6 +793,7 @@
 #' @param rolledImage Image that has been put through the .roll_image()
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be below the line you are tracing
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
 #' can add to to change the scaling: nrow(imageMatrix) - bottomcut + Envelope
@@ -827,6 +829,7 @@
 #' @param rolledImage Image that has been put through the .roll_image()
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be above the line you are tracing
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
 #' can do nrow(imageMatrix) - bottomcut + Envelope change the scaling
@@ -863,6 +866,7 @@
 #' @param rolledImage Image that has been put through the .roll_image()
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be below the line you are tracing
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
 #'
 #' @return vector of points for a line, in the correct scaling for the rolled image.
 #' can do nrow(imageMatrix) - bottomcut + Envelope change the scaling
@@ -892,6 +896,7 @@
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be below the line you are tracing
 #' @param topOfLine bool, if you are tracing the top of the bottom of the line
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
 #'
 #' @return corected bound for the envelope
 .envelope_creation <- function(rolledImage, chosenRoughBound, max_roc = 25, sepDist = 20, topOfLine = TRUE, maxNoise = 100){
@@ -975,4 +980,24 @@
     correctedWhite <- nrow(rolledImage) - newBound - sepDist
   }
   return(correctedWhite)
+}
+
+
+
+#' Isolating Traces
+#'
+#' Takes two envelopes and sets all other pixels to 0 (black)
+#'
+#' @param imageMatrix The processed Image matrix with import_process_image()
+#' @param topEnv Upper envelope for one trace
+#' @param bottomEnv Lower envelope for one trace
+#'
+#' @return matrix of the one trace on black(NOTE: still in origional spot on plot)
+.isolating_trace <- function(imageMatrix, topEnv, bottomEnv){
+  n <- nrow(imageMatrix)
+  for (j in 1:ncol(imageMatrix)) {
+    imageMatrix[c(0:(topEnv[j])),j] <- 0
+    imageMatrix[c((bottomEnv[j]):n),j] <- 0
+  }
+  return(imageMatrix)
 }

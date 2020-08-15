@@ -240,3 +240,104 @@ import_process_image <- function(imageName, file_loc, trimAmountTop = 100,
   return(imageMatrix)
 }
 
+
+
+#' Image Blurring with Rollmean
+#'
+#' uses rollMean from zoo to blurr image ( used to get rid of timing gaps)
+#'
+#' @param imageMatrix the image matrix from import_process_image
+#' @param topcut Top cutoff from .top_cut()
+#' @param bottomcut Bottom cutoff from .bottom_cut()
+#' @param fill Default "extend" see rollMean in zoo for details
+#' @param k See rollMean() in zoo for details
+#'
+#' @return rolled image matrix to user
+mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k = 40){
+  imageWithoutTopBottom <- imageMatrix[-c(0:topcut, bottomcut:nrow(imageMatrix)), ]
+  vert <- t(imageWithoutTopBottom)
+  rolledImage <- t(zoo::rollmean(vert, k = k, fill = fill))
+  rolledImage[which(rolledImage != 0)] <- 1
+  return(rolledImage)
+}
+
+
+
+
+#' Finding Envelopes for Two Traces
+#'
+#' @param rolledImage product of mean_roll_image()
+#' @param imageMatrix ImageMatrix from import_process_image()
+#' @param bottomcut from .Image_cut()
+#' @param returnType Either "MatrixScaled" used if you are manipulating with imageMatrix,
+#' "plottingScaled" used if you are plotting the imageMatrix with overlay of these lines
+#' "rolledImageScaled" used if you are overlaying the rolled image with these lines
+#' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
+#' @param sepDist how far you want the envelope to be below the line you are tracing
+#' @param maxNoise the length of creating points alowed before considered to be off of the trace
+#'
+#' @return list of all four envelopes
+#' @export
+find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepDist = 10, max_roc = 50, maxNoise = 100){
+  if (returnType == "MatrixScaled") {
+    topEnvelope <- bottomcut - .top_env(rolledImage = rolledImage,
+                                        max_roc = max_roc,
+                                        sepDist = sepDist,
+                                        maxNoise = maxNoise)
+    topLowerEnvelope <- bottomcut - .top_lower_env(rolledImage = rolledImage,
+                                                   max_roc = max_roc,
+                                                   sepDist = sepDist,
+                                                   maxNoise = maxNoise)
+    bottomUpperEnvelope <- bottomcut - .bottom_upper_env(rolledImage = rolledImage,
+                                                         max_roc = max_roc,
+                                                         sepDist = sepDist,
+                                                         maxNoise = maxNoise)
+    bottomEnvelope <- bottomcut - .bottom_env(rolledImage = rolledImage,
+                                              max_roc = max_roc,
+                                              sepDist = sepDist,
+                                              maxNoise = maxNoise)
+  }
+  else if (returnType == "PlottingScaled") {
+    topEnvelope <- nrow(imageMatrix) - bottomcut + .top_env(rolledImage = rolledImage,
+                                                            max_roc = max_roc,
+                                                            sepDist = sepDist,
+                                                            maxNoise = maxNoise)
+    topLowerEnvelope <- nrow(imageMatrix) - bottomcut + .top_lower_env(rolledImage = rolledImage,
+                                                                       max_roc = max_roc,
+                                                                       sepDist = sepDist,
+                                                                       maxNoise = maxNoise)
+    bottomUpperEnvelope <- nrow(imageMatrix) - bottomcut + .bottom_upper_env(rolledImage = rolledImage,
+                                                                             max_roc = max_roc,
+                                                                             sepDist = sepDist,
+                                                                             maxNoise = maxNoise)
+    bottomEnvelope <- nrow(imageMatrix) - bottomcut + .bottom_env(rolledImage = rolledImage,
+                                                                  max_roc = max_roc,
+                                                                  sepDist = sepDist,
+                                                                  maxNoise = maxNoise)
+  }
+  else if (returnType == "rolledImageScaled") {
+    topEnvelope <- .top_env(rolledImage = rolledImage,
+                            max_roc = max_roc,
+                            sepDist = sepDist,
+                            maxNoise = maxNoise)
+    topLowerEnvelope <- .top_lower_env(rolledImage = rolledImage,
+                                       max_roc = max_roc,
+                                       sepDist = sepDist,
+                                       maxNoise = maxNoise)
+    bottomUpperEnvelope <- .bottom_upper_env(rolledImage = rolledImage,
+                                             max_roc = max_roc,
+                                             sepDist = sepDist,
+                                             maxNoise = maxNoise)
+    bottomEnvelope <- .bottom_env(rolledImage = rolledImage,
+                                  max_roc = max_roc,
+                                  sepDist = sepDist,
+                                  maxNoise = maxNoise)
+  }
+  else {
+    stop("returnType is not correct, please look at documentation")
+  }
+  return(list(TopEnvelope = topEnvelope,
+              TopLowerEnvelope = topLowerEnvelope,
+              BottomUpperEnvelope = bottomUpperEnvelope,
+              BottomEnvelope = bottomEnvelope))
+}
