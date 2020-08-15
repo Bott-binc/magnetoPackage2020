@@ -124,11 +124,13 @@ not_empty_file <- function(filePath, fileName){
 #'
 #' @param imageMatrix Horizontal image processed
 #' @param minDistance The min distance aloud between found peaks
-#' @param percentFromEdge the distance alous from the edge of the image
-#' @param threshold how close the last three peaks have to be in height +-
+#' @param thresholdHeight How separated the heights of the three peaks can be
+#' @param thresholdDistance How far the timing lines can be from each other(
+#' saves the cases when the peaks are same height as the timing traces)
+#' @param percentFromEdge the distance alows from the edge of the image
 #'
 #' @return TRUE or FALSE for finding a triple or not
-.triple_check <- function(imageMatrix, minDistance = 50, percentFromEdge = 2, threshold = 200){
+.triple_check <- function(imageMatrix, minDistance = 50, percentFromEdge = 2, thresholdHeight = 200, thresholdDistance = 250){
   sums <- rowSums(imageMatrix)
   tripleCheck <- find_peaks(sums, minDistance = minDistance, maxPeakNumber = 6,
                             percentFromEdge = percentFromEdge, plots = FALSE)
@@ -136,13 +138,22 @@ not_empty_file <- function(filePath, fileName){
   if (length(tripleCheck$Index) == 6) { # possible a triple so we check weather
     #the timing peaks are close together in heights
     #this can be an indication that there are possibly three traces on the image
-    if (tripleCheck$Height[5] - threshold <= tripleCheck$Height[4] &
-        tripleCheck$Height[4] <= tripleCheck$Height[5] + threshold &
-        tripleCheck$Height[5] - threshold <= tripleCheck$Height[6] &
-        tripleCheck$Height[6] <= tripleCheck$Height[5] + threshold) {
-      return(TRUE)
+    if (tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[4] &
+        tripleCheck$Height[4] <= tripleCheck$Height[5] + thresholdHeight &
+        tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[6] &
+        tripleCheck$Height[6] <= tripleCheck$Height[5] + thresholdHeight) {
+      #checking that the three peaks are sufficiently close to eachother
+      if (tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[4] &
+          tripleCheck$Index[4] <= tripleCheck$Index[5] + thresholdDistance &
+          tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[6] &
+          tripleCheck$Index[6] <= tripleCheck$Index[5] + thresholdDistance){
+        return(TRUE)
+      }
+      else{# to far apart
+        return(FALSE)
+      }
     }
-    else {
+    else {#heights differ
       return(FALSE)
     }
   }

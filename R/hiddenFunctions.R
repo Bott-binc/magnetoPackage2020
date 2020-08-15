@@ -319,7 +319,7 @@
 #'
 #' Can also be used to remove those ranges where the trace isn't if returnMat is TRUE
 #'
-#' @param imageMatrix Imported image into matrix form, can use tiff_import()
+#' @param imageMatrix Imported image into matrix form, can use tiff_import(), processed already
 #' @param cutPercentage A bound for which the start and end is never found, could be a flare
 #' on the sides of the scanned image
 #' @param peakThreshold Smallest difference allowed for a difference to be a possible peak
@@ -333,9 +333,9 @@
 #' @return Image matrix with removed start and end, or the index of these start and ends
 .get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20,
                                   returnMat = TRUE, maxStart = 700, minEnd = 4800){
-  imageMatrix <- .horizontal_image_check(imageMatrix)
-  processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
-  SumsImage <- colSums(processedImage)
+  # imageMatrix <- .horizontal_image_check(imageMatrix)
+  # processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
+  SumsImage <- colSums(imageMatrix)
   len <- length(SumsImage)
   diffsColSms <- abs(diff(SumsImage))
   pkThresh <- peakThreshold/100
