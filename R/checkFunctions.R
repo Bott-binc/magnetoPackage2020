@@ -177,8 +177,8 @@ not_empty_file <- function(filePath, fileName){
 #'
 #' @examples
 .intersection_check <- function(topEnv, bottomEnv, imageName, rmAmount = 300){
-  for (m in 300:(min(c(length(bottomEnv), length(topEnv))) - 300)) { #Checking for intersection between the two lines
-    if (topEnv[m] <= bottomEnv[m]) {
+  for (m in rmAmount:(min(c(length(bottomEnv), length(topEnv))) - rmAmount)) { #Checking for intersection between the two lines
+    if (topEnv[m] >= bottomEnv[m]) { # reversed because indexing is upsidedown for images
       return(warning(paste0("There is an intersection at (", topEnv[m], ", ", m, ")")))
 
     }

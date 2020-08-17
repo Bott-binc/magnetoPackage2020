@@ -124,7 +124,7 @@ find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge, per
 
   ret <- .finding_Peak_Start_Ends(foundPeaks, rowSums)
   if (plots == TRUE) {
-  .plot_peaks(ret, rowSums)
+  .plot_peaks(ret, rowSums, StartEndLine = StartEndplotLine)
   }
   return(ret[order(ret$Index),])
 
