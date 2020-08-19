@@ -904,7 +904,7 @@
   foundNonZero <- FALSE
   counterRight <- 0
   counterLeft <- 0
-  #browser()
+
   #second half of image
   for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) {
     x <- newBound[i]
@@ -940,6 +940,7 @@
   }
   foundNonZero <- FALSE
   #first half of image
+
   for (j in 1:(round(ncol(rolledImage))/2 )) {
     i <- (round(ncol(rolledImage))/2 + 1) - j
     x <- newBound[i]
@@ -954,7 +955,7 @@
       oneLess <- newBound[i + 1] # actually more because reverse indexing
       diff <-  oneLess - x # remember that the picture is reversed as well, 0 is the top..
       if (abs(diff) >= max_roc) { # big change, could be a jump
-        #browser()
+        browser()
         newBound[i] <- newBound[i + 1]
         counterLeft <- counterLeft + 1
       }
