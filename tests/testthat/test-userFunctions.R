@@ -70,15 +70,54 @@ test_that("Returns The Correct Error",{
 })
 
 
+# this is not needed anymore
+# context(desc = "deconv_gauss")
+# test_that("Returns expected value", {
+#   image <- matrix(data = c(1:12), nrow = 4, ncol = 6)
+#   expected <- c(-3.1587712, -3.5025280, -3.6482256, -3.7332883,
+#                 -3.7663271, -3.3626800, -1.7124795, 1.8264546,
+#                 6.8017323, 11.3811585, 13.3243517, 11.5739424,
+#                 7.0550070,  1.9330442, -1.9662331, -4.1387981,
+#                 -5.0355809, -4.9397223, -3.3559227,  0.4073428,
+#                 6.0395086, 11.7147557, 15.0063607, 14.5793650)
+#   expect_equal((deconv_gauss(imageMatrix = image)), expected)
+# })
 
-context(desc = "deconv_gauss")
-test_that("Returns expected value", {
-  image <- matrix(data = c(1:12), nrow = 4, ncol = 6)
-  expected <- c(-3.1587712, -3.5025280, -3.6482256, -3.7332883,
-                -3.7663271, -3.3626800, -1.7124795, 1.8264546,
-                6.8017323, 11.3811585, 13.3243517, 11.5739424,
-                7.0550070,  1.9330442, -1.9662331, -4.1387981,
-                -5.0355809, -4.9397223, -3.3559227,  0.4073428,
-                6.0395086, 11.7147557, 15.0063607, 14.5793650)
-  expect_equal((deconv_gauss(imageMatrix = image)), expected)
+
+
+context(desc = "import_process_image")
+test_that("Retruns the correct processed image",{
+  fileName <- "AGC-D-19211221-19211223.tif"
+  fileLocation <- "/home/ben/magnetoMARK/Images/Range/AGC-D-19210101-19240305/"
+  expected <- readRDS("~/magneto/tests/testData/processedAGC-D-19211221.RDS")
+  expect_equal(import_process_image(fileName, fileLocation), expected)
 })
+
+
+
+context(desc = "mean_roll_image")
+test_that("rolls the correct way", {
+  imageMatrix <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
+  expected <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  topcut <- 612
+  bottomcut <- 1114
+  expect_equal(mean_roll_image(imageMatrix, topcut = topcut, bottomcut = bottomcut), expected)
+})
+
+
+
+context(desc = "find_envelopes")
+test_that("corret envelope is found for an image", {
+  imageMatrix <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
+  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  expectedPlotting <- readRDS("~/magneto/tests/testData/envPlottingH-19260103.RDS")
+  expectedMatrix <- readRDS("~/magneto/tests/testData/envMatrixH-19260103.RDS")
+  expectedRolled <- readRDS("~/magneto/tests/testData/envRolledH-19260103.RDS")
+  bottomcut <- 1114
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "PlottingScaled"), expectedPlotting)
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "MatrixScaled"), expectedMatrix)
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "RolledImageScaled"), expectedRolled)
+  expect_error(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "notCorrect"),
+              regexp = "returnType is not correct, please look at documentation")
+})
+
