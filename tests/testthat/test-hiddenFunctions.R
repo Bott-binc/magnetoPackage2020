@@ -123,11 +123,11 @@ test_that("scales correctly with correct return", {
 })
 
 
-
+#NOTE: this function is becoming depreciated needs to be reworked or removed
 context(desc = ".get_trace_start_ends")
 test_that("correctStart and end found for an image",{
   image <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
-  expected <- list(Start = 429, End = 5990)
+  expected <- list(Start = 700, End = 4927)
   expectedFullReturn <- readRDS("~/magneto/tests/testData/StartEndTestFullRet.RDS")
   expect_equal(.get_trace_start_ends(image, returnMat = FALSE), expected)
   expect_equal(.get_trace_start_ends(image, returnMat = TRUE), expectedFullReturn)
@@ -203,6 +203,57 @@ test_that("correct dataframe of indexes and lengths returned", {
 })
 
 
-#need to try on some more images before deemed to be ready for the unit testing
-#context(desc = ".top_env")
-#test_that("correct line chosen for the top envalope for the image")
+
+context(desc = ".top_env")
+test_that("correct line chosen for the top envelope for the image",{
+  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledTopEnv.RDS")
+  expect_equal(.top_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
+})
+
+
+
+context(desc = ".top_lower_env")
+test_that("correct line chosen for the top lower envelope for the image",{
+  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledTopLowerEnv.RDS")
+  expect_equal(.top_lower_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
+})
+
+
+
+context(desc = ".bottom_upper_env")
+test_that("correct line chosen for the bottom upper envelope for the image",{
+  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledBottomUpperEnv.RDS")
+  expect_equal(.bottom_upper_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
+})
+
+
+
+context(desc = ".bottom_env")
+test_that("correct line chosen for the bottom envelope for the image",{
+  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledBottomEnv.RDS")
+  expect_equal(.bottom_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
+})
+
+
+
+context(desc = ".isolating_trace")
+test_that("correct isolated image is returned to the user",{
+  image <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
+  topEnvelope <- readRDS("~/magneto/tests/testData/MatTopEnv.RDS") # this is matrix scaled
+  bottomEnvelope <- readRDS("~/magneto/tests/testData/MatTopLowerEnv.RDS")
+  expected <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS")
+  expect_equal(.isolating_trace(image, topEnv = topEnvelope, bottomEnv = bottomEnvelope), expected)
+})
+
+
+
+context(desc = ".env_start_end")
+test_that("correct start and end found for an isolated trace", {
+  image <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS") # this is a single trace matrix
+  expected <- list(Start = 312, End = 5869)
+  expect_equal(.env_start_end(image), expected)
+})
