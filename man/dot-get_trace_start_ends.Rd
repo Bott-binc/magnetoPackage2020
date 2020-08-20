@@ -15,7 +15,7 @@
 )
 }
 \arguments{
-\item{imageMatrix}{Imported image into matrix form, can use tiff_import()}
+\item{imageMatrix}{Imported image into matrix form, can use tiff_import(), processed already}
 
 \item{cutPercentage}{A bound for which the start and end is never found, could be a flare
 on the sides of the scanned image}

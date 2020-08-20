@@ -23,6 +23,8 @@
 \item{sepDist}{how far you want the envelope to be below the line you are tracing}
 
 \item{topOfLine}{bool, if you are tracing the top of the bottom of the line}
+
+\item{maxNoise}{the length of creating points alowed before considered to be off of the trace}
 }
 \value{
 corected bound for the envelope

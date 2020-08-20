@@ -12,6 +12,8 @@
 \item{max_roc}{maximum rate of change allowed between two pixels on the line before deemed as noise}
 
 \item{sepDist}{how far you want the envelope to be below the line you are tracing}
+
+\item{maxNoise}{the length of creating points allowed before considered to be off of the trace}
 }
 \value{
 vector of points for a line, in the correct scaling for the rolled image.
