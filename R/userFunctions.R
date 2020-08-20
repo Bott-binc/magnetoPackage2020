@@ -279,59 +279,31 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #' @return list of all four envelopes
 #' @export
 find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepDist = 10, max_roc = 25, maxNoise = 100){
+  topEnv <- .top_env(rolledImage = rolledImage, max_roc = max_roc,
+                     sepDist = sepDist, maxNoise = maxNoise)
+  topLowerEnv <- .top_lower_env(rolledImage = rolledImage, max_roc = max_roc,
+                                sepDist = sepDist, maxNoise = maxNoise)
+  bottomUpperEnv <- .bottom_upper_env(rolledImage = rolledImage, max_roc = max_roc,
+                                      sepDist = sepDist, maxNoise = maxNoise)
+  bottomEnv <- .bottom_env(rolledImage = rolledImage, max_roc = max_roc,
+                           sepDist = sepDist, maxNoise = maxNoise)
   if (returnType == "MatrixScaled") {
-    topEnvelope <- bottomcut - .top_env(rolledImage = rolledImage,
-                                        max_roc = max_roc,
-                                        sepDist = sepDist,
-                                        maxNoise = maxNoise)
-    topLowerEnvelope <- bottomcut - .top_lower_env(rolledImage = rolledImage,
-                                                   max_roc = max_roc,
-                                                   sepDist = sepDist,
-                                                   maxNoise = maxNoise)
-    bottomUpperEnvelope <- bottomcut - .bottom_upper_env(rolledImage = rolledImage,
-                                                         max_roc = max_roc,
-                                                         sepDist = sepDist,
-                                                         maxNoise = maxNoise)
-    bottomEnvelope <- bottomcut - .bottom_env(rolledImage = rolledImage,
-                                              max_roc = max_roc,
-                                              sepDist = sepDist,
-                                              maxNoise = maxNoise)
+    topEnvelope <- bottomcut - topEnv
+    topLowerEnvelope <- bottomcut - topLowerEnv
+    bottomUpperEnvelope <- bottomcut - bottomUpperEnv
+    bottomEnvelope <- bottomcut - bottomEnv
   }
   else if (returnType == "PlottingScaled") {
-    topEnvelope <- nrow(imageMatrix) - bottomcut + .top_env(rolledImage = rolledImage,
-                                                            max_roc = max_roc,
-                                                            sepDist = sepDist,
-                                                            maxNoise = maxNoise)
-    topLowerEnvelope <- nrow(imageMatrix) - bottomcut + .top_lower_env(rolledImage = rolledImage,
-                                                                       max_roc = max_roc,
-                                                                       sepDist = sepDist,
-                                                                       maxNoise = maxNoise)
-    bottomUpperEnvelope <- nrow(imageMatrix) - bottomcut + .bottom_upper_env(rolledImage = rolledImage,
-                                                                             max_roc = max_roc,
-                                                                             sepDist = sepDist,
-                                                                             maxNoise = maxNoise)
-    bottomEnvelope <- nrow(imageMatrix) - bottomcut + .bottom_env(rolledImage = rolledImage,
-                                                                  max_roc = max_roc,
-                                                                  sepDist = sepDist,
-                                                                  maxNoise = maxNoise)
+    topEnvelope <- nrow(imageMatrix) - bottomcut + topEnv
+    topLowerEnvelope <- nrow(imageMatrix) - bottomcut + topLowerEnv
+    bottomUpperEnvelope <- nrow(imageMatrix) - bottomcut + bottomUpperEnv
+    bottomEnvelope <- nrow(imageMatrix) - bottomcut + bottomEnv
   }
   else if (returnType == "RolledImageScaled") {
-    topEnvelope <- .top_env(rolledImage = rolledImage,
-                            max_roc = max_roc,
-                            sepDist = sepDist,
-                            maxNoise = maxNoise)
-    topLowerEnvelope <- .top_lower_env(rolledImage = rolledImage,
-                                       max_roc = max_roc,
-                                       sepDist = sepDist,
-                                       maxNoise = maxNoise)
-    bottomUpperEnvelope <- .bottom_upper_env(rolledImage = rolledImage,
-                                             max_roc = max_roc,
-                                             sepDist = sepDist,
-                                             maxNoise = maxNoise)
-    bottomEnvelope <- .bottom_env(rolledImage = rolledImage,
-                                  max_roc = max_roc,
-                                  sepDist = sepDist,
-                                  maxNoise = maxNoise)
+    topEnvelope <- topEnv
+    topLowerEnvelope <- topLowerEnv
+    bottomUpperEnvelope <- bottomUpperEnv
+    bottomEnvelope <- bottomEnv
   }
   else {
     stop("returnType is not correct, please look at documentation,
@@ -342,3 +314,6 @@ find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepD
               BottomUpperEnvelope = bottomUpperEnvelope,
               BottomEnvelope = bottomEnvelope))
 }
+
+
+
