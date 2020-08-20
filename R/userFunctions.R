@@ -278,7 +278,7 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #'
 #' @return list of all four envelopes
 #' @export
-find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepDist = 10, max_roc = 50, maxNoise = 100){
+find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepDist = 10, max_roc = 25, maxNoise = 100){
   if (returnType == "MatrixScaled") {
     topEnvelope <- bottomcut - .top_env(rolledImage = rolledImage,
                                         max_roc = max_roc,
@@ -315,7 +315,7 @@ find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepD
                                                                   sepDist = sepDist,
                                                                   maxNoise = maxNoise)
   }
-  else if (returnType == "rolledImageScaled") {
+  else if (returnType == "RolledImageScaled") {
     topEnvelope <- .top_env(rolledImage = rolledImage,
                             max_roc = max_roc,
                             sepDist = sepDist,
@@ -334,7 +334,8 @@ find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepD
                                   maxNoise = maxNoise)
   }
   else {
-    stop("returnType is not correct, please look at documentation")
+    stop("returnType is not correct, please look at documentation,
+         type can be RolledImageScaled, PlottingScaled, or MatrixScaled")
   }
   return(list(TopEnvelope = topEnvelope,
               TopLowerEnvelope = topLowerEnvelope,

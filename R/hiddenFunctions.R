@@ -333,7 +333,7 @@
 #' @return Image matrix with removed start and end, or the index of these start and ends
 .get_trace_start_ends <- function(imageMatrix, cutPercentage = 1, peakThreshold = 5, gapAllow = 20,
                                   returnMat = TRUE, maxStart = 700, minEnd = 4800){
-  # imageMatrix <- .horizontal_image_check(imageMatrix)
+  # imageMatrix <- .horizontal_image_check(imageMatrix) removed these two lines because of double processing
   # processedImage <- .for_bright_image(imageMatrix) #Even if not bright image, found this to be the most consistent
   SumsImage <- colSums(imageMatrix)
   len <- length(SumsImage)
@@ -427,139 +427,6 @@
 # }
 
 
-# .find_bounds_2 <- function(imageMatrix, FindPeaksdf, rowSums, max_roc = 20){
-#   #
-#   #  FindPeaksdf -- Row Index of "peak", Max Height of "peak", PeakStart/PeakEnd - which are the edges
-#   #  of the ACTUAL spikey bit of the peak, not the overall mountain shape
-#   #
-#
-#   # what if there ARE no white pixels ... what happens?
-#   # subset to imageMatrix[, first_col_that_has_white:last_col_that_has_white]
-#
-#
-#   #########################################################################
-#   ##
-#   ## Upper bound, trace 1  (upper = top of image)
-#
-#   # First white pixel per column
-#   min_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-#     min( which(x == 1) )
-#   })
-#
-#   # Some are text and artifacts
-#   d_e <- diff(min_white)
-#   bad_text <- which(abs(d_e) >= max_roc)  # need to check here
-#
-#   # Instead, jump to other side of these ... then find the first white going down
-#   min_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
-#     first_white <- min( which(x == 1) )
-#     bottom_first <- min( which(x[(first_white + 1):length(x)] == 0) )
-#     min( which( x[(bottom_first + 1):length(x)] == 1 ) )
-#   })
-#   min_white[bad_text] <- min_white_fix
-#
-#   ############################################################################
-#   ##
-#   ## Lower bound, trace 4? (lower = bottom of image)
-#
-#   # Last white pixel per column
-#   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-#     max( which(x == 1) )
-#   })
-#
-#   # Some are text and artifacts
-#   d_e <- diff(max_white)
-#   bad_text <- which(abs(d_e) >= max_roc)  # need to check bad_text for length > 1
-#
-#   # Instead, jump to other side of these ... then find the first white going down
-#   max_white_fix <- apply(imageMatrix[, bad_text], MAR = 2, FUN = function(x) {
-#     last_white <- max( which(x == 1) )
-#     bottom_black <- max( which(x[1:(last_white - 1)] == 0) )
-#     max( which( x[1:(bottom_black - 1)] == 1 ) )
-#   })
-#   max_white[bad_text] <- max_white_fix
-#
-#   # fix the bound indexes to make sense?
-#   return(list(top_bound = min_white, bottom_bound = max_white))
-# }
-
-
-#
-#   # PeakStart[1] is the first peak, from top of image moving down
-#   startrow_top <- FindPeaksdf$PeakStart[1] - minPeakDistance
-#
-#
-#   ## Actually lower bound, trace 2  (lower = bottom of image)
-#   max_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-#     white_pixels <- which(x == 1)
-#     max(white_pixels[white_pixels > startrow_top]) }
-#   )
-#
-#   # Case 1 - the peaks are clearly separated, which means FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2]
-#   # (or, rather, at least a few pixels part ...)
-#   if(FindPeaksdf$PeakEnd[1] < FindPeaksdf$PeakStart[2] - 1) {
-#
-#     middle <- rep( round((FindPeaksdf$PeakEnd[1] + FindPeaksdf$PeakStart[2]) / 2), ncol(imageMatrix) )
-#
-#   } else {  # Case 2 - the peaks are smeared together - possibly still separated, but not clear from FindPeaks
-#
-#     ## Work from these two, find the midpoint of the traces OR the collision
-#     middle_white <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-#       white_pixels <- which(x == 1)
-#       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
-#       d_white <- diff(white_pixels)
-#
-#       if(any(d_white) > 1) { # there's a gap between traces, find the middle of it
-#
-#         bottom_trace1 <- white_pixels[which(d_white > 1)[1] - 1]
-#         top_trace2 <- white_pixels[which(d_white > 1)[1]]
-#         round( (bottom_trace1 + top_trace2) / 2 )
-#
-#       } else {  # the traces collided - there's no gap between them!
-#
-#         round(( white_pixels[1] + white_pixels[length(white_pixels)] ) / 2 )
-#
-#       }
-#     })
-#
-#     ## Identify collided columns, if any
-#     collided <- apply(imageMatrix, MAR = 2, FUN = function(x) {
-#       white_pixels <- which(x == 1)
-#       white_pixels <- white_pixels[white_pixels >= min_white & white_pixels <= max_white]
-#       d_white <- diff(white_pixels)
-#
-#       if (any(d_white) > 1) { # there's a gap between traces, no collision
-#
-#         FALSE
-#
-#       } else {  # the traces collided - there's no gap between them!
-#
-#         TRUE
-#
-#       }
-#     })
-#
-#
-#     # have collided, middle_white, min_white, max_white
-#     top_envelope <- min_white
-#     middle_envelope <- middle_white
-#     bottom_envelope <- max_white
-#     collided_cols <- collided
-#
-#   }
-# }
-#
-#
-#
-# .remove_timing_traces <- function(FindPeaksdf){
-#   if (FindPeaksdf$PeakEnd[2] > FindPeaksdf$PeakStart[3] || FindPeaksdf$PeakEnd[1] > FindPeaksdf[3]) {
-#     return(stop("Cannot remove timing as the traces overlap timing lines"))
-#   }
-#   else{
-#     FindPeaksdf[-c(3,4), ]
-#     return(FindPeaksdf)
-#   }
-# }
 
 
 #' Top Image Cut
@@ -906,7 +773,7 @@
   counterLeft <- 0
 
   #second half of image
-  for (i in (round(ncol(rolledImage))/2):ncol(rolledImage)) {
+  for (i in (round(ncol(rolledImage)/2)):ncol(rolledImage)) {
     x <- newBound[i]
     #first column or no nonZero column found yet
     if ( i == 1 || isFALSE(foundNonZero)) {
@@ -941,8 +808,8 @@
   foundNonZero <- FALSE
   #first half of image
 
-  for (j in 1:(round(ncol(rolledImage))/2 )) {
-    i <- (round(ncol(rolledImage))/2 + 1) - j
+  for (j in 1:(round(ncol(rolledImage)/2 ))) {
+    i <- (round(ncol(rolledImage)/2) + 1) - j
     x <- newBound[i]
     #first column or no nonZero column found yet
     if ( j == 1 || isFALSE(foundNonZero)) {
@@ -955,7 +822,7 @@
       oneLess <- newBound[i + 1] # actually more because reverse indexing
       diff <-  oneLess - x # remember that the picture is reversed as well, 0 is the top..
       if (abs(diff) >= max_roc) { # big change, could be a jump
-        browser()
+       # browser()
         newBound[i] <- newBound[i + 1]
         counterLeft <- counterLeft + 1
       }
@@ -990,15 +857,118 @@
 #' Takes two envelopes and sets all other pixels to 0 (black)
 #'
 #' @param imageMatrix The processed Image matrix with import_process_image()
-#' @param topEnv Upper envelope for one trace
-#' @param bottomEnv Lower envelope for one trace
+#' @param topEnv Upper envelope for one trace (scaled to your matrix correctly)
+#' @param bottomEnv Lower envelope for one trace (scaled to your matrix correctly)
 #'
 #' @return matrix of the one trace on black(NOTE: still in origional spot on plot)
 .isolating_trace <- function(imageMatrix, topEnv, bottomEnv){
+  if (ncol(imageMatrix) != length(topEnv) | ncol(imageMatrix) != length(bottomEnv)) {
+    stop("ImageMatrix length differs from top or bottom env")
+  }
   n <- nrow(imageMatrix)
   for (j in 1:ncol(imageMatrix)) {
     imageMatrix[c(0:(topEnv[j])),j] <- 0
     imageMatrix[c((bottomEnv[j]):n),j] <- 0
   }
   return(imageMatrix)
+}
+
+
+
+
+#' Envelope Starts and Ends
+#'
+#' A better version of .get_image_starts_ends but meant for single traces that
+#' are isolated on their own picture.
+#'
+#' @param traceMatrix a single isolated trace, with only one trace(no timing on the plot)
+#' @param thresh How far it will go before deciding were already past the numbers at start of traces
+#'
+#' @return list of the Start and End
+.env_start_end <- function(traceMatrix, thresh = 300){
+  startFound <- FALSE
+  endFound <- FALSE
+  indicatorStart <- FALSE
+  indicatorEnd <- FALSE
+  gapLength <- 0
+
+  #Starting at the left side
+  for (i in 1:ncol(traceMatrix)) {
+    if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isFALSE(indicatorStart)) {
+      #browser()
+      startFound <- TRUE
+      possibleStarts <- i
+      counter <- i
+      if (isTRUE(indicatorStart)) {
+        break # need this to exit for loop
+      }
+    }
+    #done the gap after the first found, seeing if the length is correct
+    else if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
+      possibleStarts <- i
+      if (gapLength > 20) {
+        break
+      }
+      else{
+        gapLength <- 0
+        possibleStarts <- counter
+        indicatorStart <- FALSE
+        startFound <- TRUE
+      }
+    }
+    else if (sum(traceMatrix[,i]) == 0 & isTRUE(startFound)) {
+      if (counter + thresh > i) { #the new gap was found within the threshold limit
+
+        startFound <- FALSE
+        indicatorStart <- TRUE # this is the second time through the first part
+        #( therefore past the number at the first of the trace)
+        next
+      }
+    }
+    #the intermediate part, foun a first start and a second start, seeing how long it is
+    else if (sum(traceMatrix[,i]) == 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
+      gapLength <- gapLength + 1
+    }
+  }
+  gapLength <- 0
+  #now starting at the other side of the image
+  for (j in 1:(ncol(traceMatrix) - 1)) {
+    i <- ncol(traceMatrix) - j
+    if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isFALSE(indicatorEnd)) {
+      endFound <- TRUE
+      possibleEnds <- i
+      counter <- i
+      if (isTRUE(indicatorEnd)) {
+        break # need this to exit for loop
+      }
+    }
+    #done the gap after the first found, seeing if the length is correct
+    else if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
+      possibleEnds <- i
+      if (gapLength > 20) {
+        break
+      }
+      else{
+        gapLength <- 0
+        possibleEnds <- counter
+        indicatorEnd <- FALSE
+        endFound <- TRUE
+      }
+    }
+    else if (sum(traceMatrix[,i]) == 0 & isTRUE(endFound)) {
+      if (counter - thresh < i) { #the new gap was found within the threshold limit
+
+        endFound <- FALSE
+        indicatorEnd <- TRUE # this is the second time through the first part
+        #( therefore past the number at the first of the trace)
+        next
+      }
+    }
+    #the intermediate part, found a first start and a second start, seeing how long it is
+    else if (sum(traceMatrix[,i]) == 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
+      gapLength <- gapLength + 1
+    }
+  }
+  return(list(Start = possibleStarts, End = possibleEnds))
+
 }
