@@ -317,3 +317,69 @@ find_envelopes <- function(rolledImage, imageMatrix, bottomcut, returnType, sepD
 
 
 
+#' Create Trace
+#'
+#' Takes a top and bottom trace on an isolated image and creates line, with MA smoothing
+#'
+#' @param traceMatrix The matrix of an isolated trace
+#' @param start Start line for the trace
+#' @param end End line for the trace
+#' @param topEnv The top envelope for the isolated trace Matrix
+#' @param bottomEnv The bottom envelope for the isolated trace Matrix
+#' @param thresh The threshold for the diff() as a cut off for allowed spikes
+#' @param MARange The amount in each direction that the moving average will look at (added to the range)
+#' @param region The region that is smoothed by the moving average
+#' @param loopNumber How many times it will go through this process, (to catch the new peaks from smoothing)
+#'
+#' @return Matrix of the line, corrected for the matrix
+createTrace <- function(traceMatrix, start, end, topEnv, bottomEnv, thresh = 5, MARange = 6, region = 2, loopNumber = 4){
+  traceLine <- vector()
+  for (i in start:end) {
+    column <- traceMatrix[,i]
+    trace <- which(column == 1)
+    if (length(trace) > 0) {
+      top <- trace[1]
+      bottom <- trace[length(trace)]
+      middleOfTrace <- round((top + bottom) / 2)
+    }
+    else {
+      middleOfTrace <- round((topEnv[i] + bottomEnv[i]) / 2)
+    }
+    traceLine <- append(traceLine, middleOfTrace)
+  }
+  for (j in 1:loopNumber) {
+    jumpsUp <- which(abs(diff(traceLine)) >= thresh) # to catch the spikes
+    if (length(jumpsUp) > 0 ) {
+      #browser()
+      jumpsUp <- jumpsUp + 1 # correction so we land on the jumps not the one before the jump
+      for (i in jumpsUp) {
+        if (i < MARange) {
+          traceLine[i] <- mean(traceLine[0:(i + MARange)]) #MA smoothing
+        }
+        else if ((i + MARange) > length(traceLine)) {
+          traceLine[i] <- mean(traceLine[(i - MARange):length(traceLine)]) #MA smoothing
+        }
+        else{
+          traceLine[(i - region):(i + region)] <- mean(traceLine[(i - region - MARange):(i + region + MARange)]) #MA smoothing on the region
+        }
+      }
+    }
+  }
+  #think that we can just use the code above with the abs to do this
+  # jumpsDown <- which(diff(traceLine) <= -thresh)
+  # if (length(jumpsDown) > 0 ) {
+  #   browser()
+  #   for (i in jumpsDown) {
+  #     if (i < MARange) {
+  #       traceLine[i] <- mean(traceLine[0:(i + MARange)]) #MA smoothing
+  #     }
+  #     else if ((i + MARange) > length(traceLine)) {
+  #       traceLine[i] <- mean(traceLine[(i - MARange):length(traceLine)]) #MA smoothing
+  #     }
+  #     else{
+  #       traceLine[(i - region):(i + region)] <- mean(traceLine[(i - region - MARange):(i + region + MARange)]) #MA smoothing on the region
+  #     }
+  #   }
+  # }
+  return(traceLine) # no jumps, just returning the line no corrections
+}

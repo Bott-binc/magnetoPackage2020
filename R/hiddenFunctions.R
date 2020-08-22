@@ -883,9 +883,10 @@
 #'
 #' @param traceMatrix a single isolated trace, with only one trace(no timing on the plot)
 #' @param thresh How far it will go before deciding were already past the numbers at start of traces
+#' @param returnMatrix Willl return the cut matrix if TRUE, if FALSE will return list of the Start and End
 #'
-#' @return list of the Start and End
-.env_start_end <- function(traceMatrix, thresh = 300){
+#' @return list of the Start and End or cut matrix
+.env_start_end <- function(traceMatrix, thresh = 300, returnMatrix = TRUE){
   startFound <- FALSE
   endFound <- FALSE
   indicatorStart <- FALSE
@@ -969,6 +970,11 @@
       gapLength <- gapLength + 1
     }
   }
-  return(list(Start = possibleStarts, End = possibleEnds))
+  if (isFALSE(returnMatrix)) {
+    return(list(Start = possibleStarts, End = possibleEnds))
+  }
+  else {
+    return(traceMatrix[,possibleStarts:possibleEnds])
+  }
 
 }
