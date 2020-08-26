@@ -255,5 +255,5 @@ context(desc = ".env_start_end")
 test_that("correct start and end found for an isolated trace", {
   image <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS") # this is a single trace matrix
   expected <- list(Start = 312, End = 5869)
-  expect_equal(.env_start_end(image), expected)
+  expect_equal(.env_start_end(image, returnMatrix = FALSE), expected)
 })

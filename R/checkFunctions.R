@@ -167,33 +167,19 @@ not_empty_file <- function(filePath, fileName){
   if (length(cutCheck$Index) == 4) { # possible a triple so we check weather
     #the timing peaks are close together in heights ( for the cut image ( there will be four where there should be 2))
     #this can be an indication that there are possibly three traces on the image
-    # if (cutCheck$Height[4] - 3000 <= cutCheck$Height[3] &
-    #     cutCheck$Height[3] <= cutCheck$Height[4] + 3000 &
-    #     cutCheck$Height[3] - 3000 <= cutCheck$Height[2] &
-    #     cutCheck$Height[2] <= cutCheck$Height[3] + 3000 &
-    #     cutCheck$Height[2] - 3000 <= cutCheck$Height[1] &
-    #     cutCheck$Height[1] <= cutCheck$Height[2] + 3000 ) {
-      #checking that the three peaks are sufficiently close to eachother
+
     max <- max(cutCheck$Height)
     count <- 0
-    for (i in 1:4){
+    for (i in 1:4) {
       if (max + threshCutImage >= cutCheck$Height[i] &
-          max - threshCutImage <= cutCheck$Height[i]){
+          max - threshCutImage <= cutCheck$Height[i]) {
         count <- count + 1
       }
     }
     # if two others are in that range then they are probabily a tripple set
-    if (count >= 3){
+    if (count >= 3) {
       return(TRUE)
     }
-
-      # else{# to far apart
-      #   return(FALSE)
-      # }
-
-    # else {#heights differ
-    #   return(FALSE)
-    # }
   }
   return(FALSE) # this is if the other two dont return anything
 }
@@ -220,4 +206,43 @@ not_empty_file <- function(filePath, fileName){
     }
   }
   return(FALSE) # there is no intersection in the bounds
+}
+
+
+
+#' HDV Checking
+#'
+#' HDV is a type of image with three normal images on the same scan, these cause big problems
+#' filters them out by the name
+#'
+#' @param imageName The file name for the specific image
+#'
+#' @return warning if these are found (use a tryCatch)
+.hdv_check <- function(imageName){
+  splitName <- strsplit(imageName, "-")
+  imageType <- splitName[[1]][3]
+  imageTypePosition2 <- splitName[[1]][2]
+  if (imageType == "HDV" || imageType == "HDZ" || imageType == "ZDH" || imageType == "H D and V"
+      || imageType == "V D and H" || is.na(imageType) || imageTypePosition2 == "HDV" ||
+      imageTypePosition2 == "HDZ" || imageTypePosition2 == "ZDH" ||
+      imageTypePosition2 == "H D and V" || imageTypePosition2 == "V D and H" || is.na(imageTypePosition2)) {
+    return(warning("This image is a HDV or HDZ"))
+  }
+}
+
+
+
+#' Trace Spike Check
+#'
+#' Looks for abnormal spikes in the trace that wasn't smoothed out before
+#'
+#' @param trace a single trace
+#' @param spikeThreshold how big the difference has to be to be considered to be a spike
+#'
+#' @return
+.spike_check <- function(trace, spikeThreshold = 50){
+  if (length(which(abs(diff(trace)) > spikeThreshold)) > 0) {
+    return(warning("abnormal spike in the top trace"))
+  }
+  else(return(NULL))
 }

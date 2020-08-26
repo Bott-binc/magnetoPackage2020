@@ -23,6 +23,7 @@ Imports:
     multitaper,
     stats,
     OpenImageR,
-    zoo
+    zoo,
+    rtiff
 SystemRequirements:
   Python

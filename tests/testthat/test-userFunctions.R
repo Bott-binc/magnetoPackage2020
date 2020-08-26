@@ -114,10 +114,10 @@ test_that("corret envelope is found for an image", {
   expectedMatrix <- readRDS("~/magneto/tests/testData/envMatrixH-19260103.RDS")
   expectedRolled <- readRDS("~/magneto/tests/testData/envRolledH-19260103.RDS")
   bottomcut <- 1114
-  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "PlottingScaled"), expectedPlotting)
-  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "MatrixScaled"), expectedMatrix)
-  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "RolledImageScaled"), expectedRolled)
-  expect_error(find_envelopes(rolledImage, imageMatrix, bottomcut, returnType = "notCorrect"),
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomCut, returnType = "PlottingScaled"), expectedPlotting)
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomCut, returnType = "MatrixScaled"), expectedMatrix)
+  expect_equal(find_envelopes(rolledImage, imageMatrix, bottomCut, returnType = "RolledImageScaled"), expectedRolled)
+  expect_error(find_envelopes(rolledImage, imageMatrix, bottomCut, returnType = "notCorrect"),
               regexp = "returnType is not correct, please look at documentation")
 })
 

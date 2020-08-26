@@ -478,11 +478,11 @@
 #' @param percentEdgeForLeft passed into find peaks, if not specified, uses
 #' percentFromEdge for both left and right sides, if specified, percentFromEdge
 #' is defaulted to just the right side of the plot
-#' @param shortestAlowedSeqOfZeros smallest gap alowed to be found to consider
+#' @param shortestAllowedSeqOfZeros smallest gap allowed to be found to consider
 #' the trace not intersecting the timing marks
 #'
 #' @return value of bottom cut that should be removed
-.bottom_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL, shortestAlowedSeqOfZeros = 50){
+.bottom_image_cut <- function(imageMatrix, percentFromEdge, percentEdgeForLeft = NULL, shortestAllowedSeqOfZeros = 50){
   rowsumsImage <- rowSums(imageMatrix)
   diffRowSumsImage <- diff(rowsumsImage)
   zeros <- .find_a_number(diffRowSumsImage, specNumber = 0)
@@ -498,7 +498,7 @@
     warning("No cuts found.. defaulting to bottom of the image")
     bottomCut = length(rowsumsImage)
   }
-  else if (longestCut < shortestAlowedSeqOfZeros) {
+  else if (longestCut < shortestAllowedSeqOfZeros) {
     warning("Intersection in Timing Found")
     return(length(rowsumsImage))
   }
@@ -539,6 +539,31 @@
   return(imageProcessed)
 }
 
+
+
+#' Rough Trim for Sides
+#'
+#' trims roughly the right and left sides if the user knows where there will definitely not be any points
+#'
+#' @param trimAmountLeft in percentage
+#' @param trimAmountRight in percentage
+#' @param image A matrix
+#'
+#' @return the matrix without the specified bounds
+.trim_Sides <- function(image, trimAmountLeft = 2, trimAmountRight = 2){
+  leftPerc <- trimAmountLeft/100
+  rightPerc <- trimAmountRight/100
+  if (leftPerc != 0 & rightPerc != 0) {
+    imageProcessed <- image[,-c(0:(leftPerc*ncol(image)), (ncol(image) - rightPerc*ncol(image)):ncol(image))]
+  }
+  else if (leftPerc != 0) {
+    imageProcessed <- image[,-c(0:(leftPerc*ncol(image)))]
+  }
+  else if (rightPerc != 0) {
+    imageProcessed <- image[,-c((ncol(image) - rightPerc*ncol(image)):ncol(image))]
+  }
+  return(imageProcessed)
+}
 
 
 #' Process Image
@@ -856,6 +881,8 @@
 #'
 #' Takes two envelopes and sets all other pixels to 0 (black)
 #'
+#' NOTE: topEnv is less then bottomEnv because indexing 0 is at top of image for matrix scaled
+#'
 #' @param imageMatrix The processed Image matrix with import_process_image()
 #' @param topEnv Upper envelope for one trace (scaled to your matrix correctly)
 #' @param bottomEnv Lower envelope for one trace (scaled to your matrix correctly)
@@ -977,4 +1004,43 @@
     return(traceMatrix[,possibleStarts:possibleEnds])
   }
 
+}
+
+
+
+#' Get Year From Image Name
+#'
+#' @param imageName a string
+#'
+#' @return Year
+.get_image_year <- function(imageName){
+  splitName <- strsplit(imageName, "-")
+  date <- splitName[[1]][length(splitName[[1]]) - 1]
+  yearVector <- strsplit(date,"")[[1]][1:4]
+  year <- paste0(yearVector[1], yearVector[2], yearVector[3], yearVector[4])
+  return(year)
+}
+
+
+
+#' Directory Structure Creation
+#'
+#' Creates the directory structure for the digitized images along with setting with
+#' pwd for that specific image, if that year doesn't exist, it will create one
+#'
+#' @param imageName A string of the image name
+#' @param pathToWorkingDir Where the digitized images will be put
+#'
+#' @return The pwd for that specific image
+.dir_Str <- function(imageName, pathToWorkingDir){
+  year <- .get_image_year(imageName)
+  if (dir.exists(paste0(pathToWorkingDir, "/", year, "/"))) {
+    pwd <- paste0(pathToWorkingDir, "/", year, "/")
+    return(pwd)
+  }
+  else {
+    dir.create(paste0(pathToWorkingDir, "/", year, "/"))
+    pwd <- paste0(pathToWorkingDir, "/", year, "/")
+    return(pwd)
+  }
 }
