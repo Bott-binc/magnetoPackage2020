@@ -19,3 +19,6 @@ matrix of the one trace on black(NOTE: still in origional spot on plot)
 \description{
 Takes two envelopes and sets all other pixels to 0 (black)
 }
+\details{
+NOTE: topEnv is less then bottomEnv because indexing 0 is at top of image for matrix scaled
+}

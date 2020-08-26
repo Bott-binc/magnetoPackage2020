@@ -4,15 +4,17 @@
 \alias{.env_start_end}
 \title{Envelope Starts and Ends}
 \usage{
-.env_start_end(traceMatrix, thresh = 300)
+.env_start_end(traceMatrix, thresh = 300, returnMatrix = TRUE)
 }
 \arguments{
 \item{traceMatrix}{a single isolated trace, with only one trace(no timing on the plot)}
 
 \item{thresh}{How far it will go before deciding were already past the numbers at start of traces}
+
+\item{returnMatrix}{Willl return the cut matrix if TRUE, if FALSE will return list of the Start and End}
 }
 \value{
-list of the Start and End
+list of the Start and End or cut matrix
 }
 \description{
 A better version of .get_image_starts_ends but meant for single traces that

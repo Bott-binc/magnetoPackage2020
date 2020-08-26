@@ -5,9 +5,9 @@
 \title{Finding Envelopes for Two Traces}
 \usage{
 find_envelopes(
-  rolledImage,
   imageMatrix,
-  bottomcut,
+  rolledImage,
+  bottomCut,
   returnType,
   sepDist = 10,
   max_roc = 25,
@@ -15,11 +15,12 @@ find_envelopes(
 )
 }
 \arguments{
-\item{rolledImage}{product of mean_roll_image()}
-
 \item{imageMatrix}{ImageMatrix from import_process_image()}
 
-\item{bottomcut}{from .Image_cut()}
+\item{rolledImage}{the image rolled by mean_roll_image()}
+
+\item{bottomCut}{a point that is the height of a horizontal line between the timing marks
+and the bottom trace}
 
 \item{returnType}{Either "MatrixScaled" used if you are manipulating with imageMatrix,
 "plottingScaled" used if you are plotting the imageMatrix with overlay of these lines
@@ -29,7 +30,7 @@ find_envelopes(
 
 \item{max_roc}{maximum rate of change allowed between two pixels on the line before deemed as noise}
 
-\item{maxNoise}{the length of creating points alowed before considered to be off of the trace}
+\item{maxNoise}{the length of creating points allowed before considered to be off of the trace}
 }
 \value{
 list of all four envelopes

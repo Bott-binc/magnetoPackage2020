@@ -2,7 +2,7 @@
 % Please edit documentation in R/userFunctions.R
 \name{import_process_image}
 \alias{import_process_image}
-\title{Title}
+\title{Import and Process a .tiff or .tif image}
 \usage{
 import_process_image(
   imageName,
@@ -56,5 +56,5 @@ which will be used to perform either delation or erosion, such as c(8,8)}
 imageMatrix processed and trimed, in landscape orientation
 }
 \description{
-Title
+Import and Process a .tiff or .tif image
 }

@@ -8,7 +8,7 @@
   imageMatrix,
   percentFromEdge,
   percentEdgeForLeft = NULL,
-  shortestAlowedSeqOfZeros = 50
+  shortestAllowedSeqOfZeros = 50
 )
 }
 \arguments{
@@ -21,7 +21,7 @@ in a region}
 percentFromEdge for both left and right sides, if specified, percentFromEdge
 is defaulted to just the right side of the plot}
 
-\item{shortestAlowedSeqOfZeros}{smallest gap alowed to be found to consider
+\item{shortestAllowedSeqOfZeros}{smallest gap allowed to be found to consider
 the trace not intersecting the timing marks}
 }
 \value{
