@@ -458,7 +458,7 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
                                   bottomCut = bottomCut, returnType = "PlottingScaled",
                                   maxNoise = maxNoise, max_roc = max_roc, sepDist = sepDist)
 
-  png(paste0(pathToWorkingDir, imageName, ".png"))
+  png(paste0(pathToWorkingDir, imageName, "-plot", ".png"))
   suppressWarnings(plot(imageMatrix))
   lines(plotEnvelopes$TopEnvelope, col = "green")
   lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
@@ -489,9 +489,9 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
 #' @export
 plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
                                imageName){
-
-  png(paste0(pathToWorkingDir, imageName, "failProcess", ".png"))
+  newPathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
   # 2. Create a plot
+  png(paste0(newPathToWorkingDir, imageName, "-FailProcess-Plot",".png"))
   suppressWarnings(plot(imageMatrix))
   abline(h = (nrow(imageMatrix) - topCut), col = "green")
   abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
@@ -507,11 +507,16 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
 #'
 #' Combines all other functions to allow the user to digitize one image.
 #' All parameters are adjustable to allow for attempts to digitize more then one
-#' type of image
+#' type of image.  Recommended to experiment with all individual functions, then set
+#' parameters in this function to do the total digitiziation.
 #'
 #' Beta 0 and Beta1 are required for the brightness, changes the method for the
 #' image processing, if an image is bright, the parameters change to try and remove
-#' the over exposure so the envelopes can be more accurate around a trace.
+#' the over exposure so the envelopes can be more accurate around a trace. These
+#' can be found using a logistic regression with the predictor of the proportion of
+#' pixels above 0.8 scaled by the total number of pixels.  The user imput the response
+#' variable, a decision of 0(not bright) and 1(bright) for a large number of images,
+#' to "train" the algorithm what to decide.
 #'
 #' @param imageName The name of the file
 #' @param fileLoc Path from ~/ to the dir where the file is
@@ -558,30 +563,31 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
 #' to be considered to be a triple set of peaks (only used for magneto, make 0 if not needed)
 #' @param tripleThresholdDistance How far apart the peaks can be for the them to be
 #' considered to be a set of triples (only used for magneto, make large if not needed)
-#' @param threshCutImage Used in Triple check as a second way to check for triples,
-#' takes the cut image(not timing or writing and does the find peaks on it, checks for 3 peaks)
+#' @param threshCutImage Used in triple_check as a second way to check for triples,
+#' takes the cut image(no timing or writing on the image) it then finds peaks and checks for 3 peaks(a triple)
 #' Same definition as the tripleThresholdDistance but different value needed because different scale
 #' @param OffsetDistanceForEnvelopes How far off of the trace you would like the envelope to be
 #' used as a safety net to catch any parts of the trace that might not be detected
-#' @param maxEnvelopeROC The max difference (rate of change) between any two points before considered to have started
-#' to trace noise (little points or the words) and are not running along the actual trace anymore.
+#' @param maxEnvelopeROC The max difference (rate of change) between any two points of the trace envelope before
+#' the outlier point will be removed and considered to be noise, these are usually seen as jumps in the envelopes
 #' @param maxNoise The max amount of points created off of the trace before the
 #' envelope can be considered to be not filling in a gap but being off of the
 #' trace entirely, will correct after this number
-#' @param envelopeStartEndThreshold How far the start and end lines will go
-#' measuring in pixels before guaranteed to be past any noise or writing before the trace
-#' (will only use if no other start points are found)
-#' @param intersetionRemoveAmount The amount removed of the image (from the right and the left)
-#' before looking for an intersection between the two traces
-#' @param CreateTraceThreshold The cutoff for the ROC between two points, any
-#' points found during the final line tracing higher then the ROC
-#' will be smoothed with a MA
+#' @param envelopeStartEndThreshold The default vertical start and end location for the trace lines,
+#' if they aren't found automatically
+#' @param intersetionRemoveAmount The amount ignored from both the right and left sides
+#' of the image where possible trace lines could intersect because of noise
+#' This is to ensure that false intersections aren't found between the two traces
+#' @param CreateTraceThreshold During the final digitization lines of traces,
+#' any difference found higher then the CreateTraceThreshold between any two points will be smoothed with a MA
 #' @param MARange The amount of points in each direction that the moving average
-#'  will look at to calculate the MA on (added to teh region value for the whole MARange)
-#' @param region The region inside the MA that will be corrected to the MA value
-#' @param loopNumber The amount of times the MA Smoothing will happen, to guarantee creation of other peaks
-#' @param spikeThreshold The difference between two pixels considered to look for abnormal spikes in the tracing algorithm,
-#' could be due to a jump from one trace to another (anything above the threshold will be sent to warning)
+#'  will look at to calculate the MA on (added to the region value for the whole MARange)
+#' @param region The number of points inside the MA that will be corrected to the MA value
+#' @param loopNumber The amount of times the MA Smoothing will happen, to guarantee elimination of other peaks that could be
+#' created from the MA
+#' @param spikeThreshold The difference in height between two pixels in the final digitization lines
+#' checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
+#' (anything above the threshold will be sent to warning)
 #' @param k See rollMean() in zoo package for details
 #'
 #' @return
@@ -605,6 +611,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 envelopeStartEndThreshold = 300, intersetionRemoveAmount = 1000,
                 CreateTraceThreshold = 5, MARange = 6, region = 2,
                 loopNumber = 4, spikeThreshold = 50, k = 40){
+
   traceWarnings <- vector()
   typeCheck <- NULL # if you aren't using the HDV check
   flag = FALSE
@@ -613,9 +620,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     typeCheck <- tryCatch(.hdv_check(imageName), warning = function(w) w)
   }
   if (inherits(typeCheck, "warning")) {
-    print(typeCheck)
-    traceWarnings <- append(traceWarnings, vector)
-    flag = TRUE #wont process, but will put a plot out into the pwd
+    return(typeCheck) # will return the warning if an HDV is found
   }
   else {
     # Process The Image ----------------------------------------------------------
@@ -630,11 +635,12 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                         methodNonBright = methodNonBright,
                                         thresholdBright = thresholdBright,
                                         thresholdNonBright = thresholdNonBright)
+    #takes off the usual flair spots
     imageSideCut <- .trim_Sides(imageMatrix, trimAmountLeft = trimAmountLeft,
                                 trimAmountRight = trimAmountRight)
     imageCut <- .trim_top_bottom(imageSideCut, trimAmountTop = trimAmountTop,
                                  trimAmountBottom = trimAmountBottom)
-    #takes off the usual flair spots
+
 
     # Find the Top and Bottom Cut for the Image -----------------------------------
 
@@ -642,8 +648,8 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                percentEdgeForLeft = peakPercentFromEdgeLeftSide,
                                cutPercentage = cutPercentage,
                                shortestAllowedSeqOfZeros = shortestAllowedSeqOfZeros)
-    topCut <- topBottomCuts$TopCut
-    bottomCut <- topBottomCuts$BottomCut
+    topCut <- topBottomCuts$TopCut # line between the words and the top trace
+    bottomCut <- topBottomCuts$BottomCut # line between the timing traces and the bottom trace
     if (inherits(topCut, "warning")) {
       print(topBottomCuts$TopCut)
       traceWarnings <- append(traceWarnings, topCut)
@@ -657,7 +663,6 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
       bottomCut <- nrow(imageCut)
     }
   }
-
   if (isFALSE(flag)) {
     # Check for a Triple Set of Traces -------------------------------------------
     tripleBool <- .triple_check(imageMatrix = imageCut, topCut = topCut,
@@ -671,13 +676,19 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     else {
 
       # Creating Envelopes ---------------------------------------------------------
+      # Gets rid of small gaps
       rolledImage <- mean_roll_image(imageMatrix = imageCut, topcut = topCut,
                                      bottomcut =  bottomCut, fill = "extend", k = k) #to get a more consistent image
-      #gets rid of small gaps
+      # Creates the matrix scaled envelope
       matrixEnvelopes <- find_envelopes(imageMatrix = imageCut, rolledImage = rolledImage, bottomCut = bottomCut,
                                         returnType = "MatrixScaled", sepDist = OffsetDistanceForEnvelopes,
                                         max_roc = maxEnvelopeROC, maxNoise = maxNoise)
-
+      # Creates the plotting scaled envelope for the return to the user
+      plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
+                                      bottomCut = bottomCut, returnType = "PlottingScaled",
+                                      maxNoise = maxNoise, max_roc = maxEnvelopeROC,
+                                      sepDist = OffsetDistanceForEnvelopes)
+      # Isolates both traces on their own plots
       traceMatrices <- isolate_traces(imageCut, topEnvelope = matrixEnvelopes$TopEnvelope,
                                       topLowerEnvelope = matrixEnvelopes$TopLowerEnvelope,
                                       bottomUpperEnvelope = matrixEnvelopes$BottomUpperEnvelope,
@@ -733,6 +744,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
     }
 
+
   }
   # Plotting (if applicable) ---------------------------------------------------
   if (isTRUE(plotPNG) & isFALSE(flag)) {
@@ -747,7 +759,8 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
                        ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
   }
-  totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage, TopTraceMatrix = topTrace,
+  totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
+                      PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
                       TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
                       BottomTraceMatrix = bottomTrace,
                       BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
@@ -755,3 +768,6 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                       Warnings = traceWarnings)
   return(totalReturn)
 }
+
+
+

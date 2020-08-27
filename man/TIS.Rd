@@ -28,7 +28,7 @@ TIS(
   peakPercentFromEdgeLeftSide = 25,
   cutPercentage = 2,
   shortestAllowedSeqOfZeros = 25,
-  TrippleCheckMinDistance = 50,
+  tripleCheckMinDistance = 50,
   tripleThresholdHeight = 200,
   tripleThresholdDistance = 250,
   threshCutImage = 500,
@@ -56,9 +56,9 @@ TIS(
 
 \item{plotPNG}{TRUE or FALSE if you want plots saved or just data returned}
 
-\item{trimAmountTop}{Number of pixels off of top of image (usually for common flares)}
+\item{trimAmountTop}{Number of pixels removed from top of image (usually for common flares)}
 
-\item{trimAmountBottom}{Number of pixels off of bottom of image}
+\item{trimAmountBottom}{Number of pixels removed from bottom of image}
 
 \item{beta0}{The intercept of a logistic regression default is for magnetograms
 Logistic regression on the decision if an image can be considered to be bright
@@ -68,7 +68,7 @@ based off of a user deciding bright or non bright on a large set of images}
 
 \item{cutoffProbability}{The probability cut off for the decision of an imageMatrix being bright}
 
-\item{NADefault}{The default value set to NA's found in the matrix}
+\item{NADefault}{The default value to replace NA's found in the matrix}
 
 \item{FilterBright}{Vector specifying the dimensions of the kernel,
 which will be used to perform either delation or erosion, such as c(13,13)}
@@ -76,43 +76,40 @@ which will be used to perform either delation or erosion, such as c(13,13)}
 \item{FilterNonBright}{Vector specifying the dimensions of the kernel,
 which will be used to perform either delation or erosion, such as c(8,8)}
 
-\item{methodBright}{one of 'delation'(adds to image, making brights brighter),
-'erosion' (subtracts from image brights darker)}
+\item{methodBright}{For bright images, choose 'delation'(adds to image, making brights brighter) or
+'erosion' (subtracts from image, making brights darker) to occur during processing}
 
-\item{methodNonBright}{one of 'delation'(adds to image, making brights brighter),
-'erosion' (subtracts from image brights darker)}
+\item{methodNonBright}{For non bright images, choose 'delation'(adds to image, making brights brighter) or
+'erosion' (subtracts from image, making brights darker) to occur during processing}
 
-\item{thresholdBright}{should be between 0 and 1 for normalized images Default = 0.8
-threshold for what can be considered to be 1 and what should be considered to be 0(noise)}
+\item{thresholdBright}{should be between 0 and 1 for black and white pixels, where the Default = 0.8
+anything over the threshold will be 1(white) and anything under will be turned to 0(black)}
 
-\item{thresholdNonBright}{should be between 0 and 1 for normalized images Default = 0.5
-#' threshold for what can be considered to be 1(the trace/ white pixel) and
-what should be considered to be 0(noise black pixel)}
+\item{thresholdNonBright}{should be between 0 and 1 for black and white pixels, where the Default = 0.5
+anything over the threshold will be 1(white) and anything under will be turned to 0(black)}
 
 \item{trimAmountLeft}{Percentage of the image that is guaranteed to not have
-any trace in it(mostly used to remove flares from the scanning process)}
+any trace in it(mostly used to remove over exposure from the scanning process)}
 
 \item{trimAmountRight}{Percentage of the image that is guaranteed to not have
-any trace in it(mostly used to remove flares from the scanning process)
+any trace in it(mostly used to remove over exposure from the scanning process)}
 
-For the cut's (removing the timing traces and the writing at the top of the image)
-look at rowSums of the matrix to see the peaks for these two parameters}
-
-\item{peakPercFromEdge}{Used in find_peaks if you know there wont be a peak
-in a region}
+\item{peakPercFromEdge}{Used in find_peaks if you know there won't be any relevant data in that region
+for finding rowSum peaks. This percentage is removed from consideration in find_peaks
+ in a region (look at rowSums of the matrix to see the peaks for this parameter)}
 
 \item{peakPercentFromEdgeLeftSide}{Passed into find peaks, if not specified (NULL), uses
-peakPercFromEdge for both left and right sides, if specified, peakPercFromEdge
-is defaulted to just the right side of the plot}
+peakPercFromEdge for both left and right sides. If specified, peakPercFromEdge
+is defaulted to just the right side of the plot
+(look at rowSums of the matrix to see the peaks for this parameter)}
 
-\item{cutPercentage}{Usually the min of trimAmountLeft and trimAmountRight}
+\item{cutPercentage}{Usually the min of either trimAmountLeft or trimAmountRight}
 
-\item{shortestAllowedSeqOfZeros}{Smallest gap allowed between the timing marks
-and the timing marks, before the trace is considered to intersect the timing marks}
+\item{shortestAllowedSeqOfZeros}{Smallest gap allowed between the lower trace
+and the timing marks, before the trace is considered to intersect with the timing marks}
 
-\item{TrippleCheckMinDistance}{Minimum distance allowed between found peaks.  Ensures that the user
-doesn't have two peaks found for where there is only one peak with two points
-at the top (only used for magneto, make large if not needed)}
+\item{tripleCheckMinDistance}{Minimum distance allowed between found peaks from rowSums().  Ensures that the user
+has max one point per peak (only used for magneto, make large if not needed)}
 
 \item{tripleThresholdHeight}{How different the heights can be for three peaks
 to be considered to be a triple set of peaks (only used for magneto, make 0 if not needed)}
@@ -120,40 +117,41 @@ to be considered to be a triple set of peaks (only used for magneto, make 0 if n
 \item{tripleThresholdDistance}{How far apart the peaks can be for the them to be
 considered to be a set of triples (only used for magneto, make large if not needed)}
 
-\item{threshCutImage}{Used in Triple check as a second way to check for triples,
-takes the cut image(not timing or writing and does the find peaks on it, checks for 3 peaks)
+\item{threshCutImage}{Used in triple_check as a second way to check for triples,
+takes the cut image(no timing or writing on the image) it then finds peaks and checks for 3 peaks(a triple)
 Same definition as the tripleThresholdDistance but different value needed because different scale}
 
 \item{OffsetDistanceForEnvelopes}{How far off of the trace you would like the envelope to be
 used as a safety net to catch any parts of the trace that might not be detected}
 
-\item{maxEnvelopeROC}{The max difference (rate of change) between any two points before considered to have started
-to trace noise (little points or the words) and are not running along the actual trace anymore.}
+\item{maxEnvelopeROC}{The max difference (rate of change) between any two points of the trace envelope before
+the outlier point will be removed and considered to be noise, these are usually seen as jumps in the envelopes}
 
 \item{maxNoise}{The max amount of points created off of the trace before the
 envelope can be considered to be not filling in a gap but being off of the
 trace entirely, will correct after this number}
 
-\item{envelopeStartEndThreshold}{How far the start and end lines will go
-measuring in pixels before guaranteed to be past any noise or writing before the trace
-(will only use if no other start points are found)}
+\item{envelopeStartEndThreshold}{The default vertical start and end location for the trace lines,
+if they aren't found automatically}
 
-\item{intersetionRemoveAmount}{The amount removed of the image (from the right and the left)
-before looking for an intersection between the two traces}
+\item{intersetionRemoveAmount}{The amount ignored from both the right and left sides
+of the image where possible trace lines could intersect because of noise
+This is to ensure that false intersections aren't found between the two traces}
 
-\item{CreateTraceThreshold}{The cutoff for the ROC between two points, any
-points found during the final line tracing higher then the ROC
-will be smoothed with a MA}
+\item{CreateTraceThreshold}{During the final digitization lines of traces,
+any difference found higher then the CreateTraceThreshold between any two points will be smoothed with a MA}
 
 \item{MARange}{The amount of points in each direction that the moving average
-will look at to calculate the MA on (added to teh region value for the whole MARange)}
+will look at to calculate the MA on (added to the region value for the whole MARange)}
 
-\item{region}{The region inside the MA that will be corrected to the MA value}
+\item{region}{The number of points inside the MA that will be corrected to the MA value}
 
-\item{loopNumber}{The amount of times the MA Smoothing will happen, to guarantee creation of other peaks}
+\item{loopNumber}{The amount of times the MA Smoothing will happen, to guarantee elimination of other peaks that could be
+created from the MA}
 
-\item{spikeThreshold}{The difference between two pixels considered to look for abnormal spikes in the tracing algorithm,
-could be due to a jump from one trace to another (anything above the threshold will be sent to warning)}
+\item{spikeThreshold}{The difference in height between two pixels in the final digitization lines
+checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
+(anything above the threshold will be sent to warning)}
 
 \item{k}{See rollMean() in zoo package for details}
 }
