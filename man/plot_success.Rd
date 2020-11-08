@@ -17,7 +17,8 @@ plot_success(
   max_roc = 35,
   sepDist = 10,
   pathToWorkingDir = "~/",
-  imageName
+  imageName,
+  intersectionFlag = FALSE
 )
 }
 \arguments{

@@ -118,98 +118,6 @@ not_empty_file <- function(filePath, fileName){
 
 
 
-#' Triple Trace Checking
-#'
-#' Using find_peaks, checks for three traces at the bottom with the same length
-#'
-#' @param imageMatrix Horizontal image processed
-#' @param minDistance The min distance aloud between found peaks
-#' @param thresholdHeight How separated the heights of the three peaks can be
-#' @param thresholdDistance How far the timing lines can be from each other(
-#' saves the cases when the peaks are same height as the timing traces)
-#' @param percentFromEdge the distance alows from the edge of the image
-#' @param topCut from .topCut() line between the text and the two traces
-#' @param bottomCut from .bottomCut() line after traces before the two timing marks
-#' @param threshCutImage how much different the peak heights have to be in the cut image
-#' for the image to be considered to be a triple.
-#'
-#' @return TRUE or FALSE for finding a triple or not
-.triple_check <- function(imageMatrix, topCut, bottomCut, minDistance = 50, percentFromEdge = 2, thresholdHeight = 200,
-                          thresholdDistance = 250, threshCutImage = 500){
-  sums <- rowSums(imageMatrix)
-  tripleCheck <- find_peaks(sums, minDistance = minDistance, maxPeakNumber = 6,
-                            percentFromEdge = percentFromEdge, plots = FALSE)
-  sumsCut <- rowSums(imageMatrix[-c(0:topCut, bottomCut:nrow(imageMatrix)), ])
-  cutCheck <- find_peaks(sumsCut, minDistance = minDistance, maxPeakNumber = 4,
-                            percentFromEdge = percentFromEdge, plots = FALSE)
-  if (length(tripleCheck$Index) == 6) { # possible a triple so we check weather
-    #the timing peaks are close together in heights
-    #this can be an indication that there are possibly three traces on the image
-    if (tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[4] &
-        tripleCheck$Height[4] <= tripleCheck$Height[5] + thresholdHeight &
-        tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[6] &
-        tripleCheck$Height[6] <= tripleCheck$Height[5] + thresholdHeight) {
-      #checking that the three peaks are sufficiently close to eachother
-      if (tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[4] &
-          tripleCheck$Index[4] <= tripleCheck$Index[5] + thresholdDistance &
-          tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[6] &
-          tripleCheck$Index[6] <= tripleCheck$Index[5] + thresholdDistance) {
-        return(TRUE)
-      }
-      # else{# to far apart
-      #   return(FALSE)
-      # }
-    }
-    # else {#heights differ
-    #   return(FALSE)
-    # }
-  }
-  if (length(cutCheck$Index) == 4) { # possible a triple so we check weather
-    #the timing peaks are close together in heights ( for the cut image ( there will be four where there should be 2))
-    #this can be an indication that there are possibly three traces on the image
-
-    max <- max(cutCheck$Height)
-    count <- 0
-    for (i in 1:4) {
-      if (max + threshCutImage >= cutCheck$Height[i] &
-          max - threshCutImage <= cutCheck$Height[i]) {
-        count <- count + 1
-      }
-    }
-    # if two others are in that range then they are probabily a tripple set
-    if (count >= 3) {
-      return(TRUE)
-    }
-  }
-  return(FALSE) # this is if the other two dont return anything
-}
-
-
-
-#' Intersection Check
-#'
-#' Takes to envelope lines and checks to see if the lower is higher then the
-#' upper
-#'
-#' @param topEnv The top envelope of the comparison
-#' @param bottomEnv The bottom envelope of the comparison
-#' @param imageName Name of the image for the warning if cross
-#' @param rmAmount How much to ignore near the edges for intersecton,
-#' this is taking off of both sides
-#'
-#' @return warning if there is an intersection
-.intersection_check <- function(topEnv, bottomEnv, imageName, rmAmount = 300){
-  for (m in rmAmount:(min(c(length(bottomEnv), length(topEnv))) - rmAmount)) { #Checking for intersection between the two lines
-    if (topEnv[m] >= bottomEnv[m]) { # reversed because indexing is upsidedown for images
-      return(warning(paste0("There is an intersection at (", topEnv[m], ", ", m, ")")))
-
-    }
-  }
-  return(FALSE) # there is no intersection in the bounds
-}
-
-
-
 #' HDV Checking
 #'
 #' HDV is a type of image with three normal images on the same scan, these cause big problems
@@ -232,17 +140,4 @@ not_empty_file <- function(filePath, fileName){
 
 
 
-#' Trace Spike Check
-#'
-#' Looks for abnormal spikes in the trace that wasn't smoothed out before
-#'
-#' @param trace a single trace
-#' @param spikeThreshold how big the difference has to be to be considered to be a spike
-#'
-#' @return
-.spike_check <- function(trace, spikeThreshold = 50){
-  if (length(which(abs(diff(trace)) > spikeThreshold)) > 0) {
-    return(warning("abnormal spike in the top trace"))
-  }
-  else(return(NULL))
-}
+

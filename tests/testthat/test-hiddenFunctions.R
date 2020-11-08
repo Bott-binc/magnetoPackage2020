@@ -171,18 +171,6 @@ test_that("Correct Warnings returned to user",{
 
 
 
-context(desc = ".trim_top_bottom")
-test_that("correct trimmed returned to the user",{
-  image <- matrix(1, nrow = 10, ncol = 10)
-  expected6 <- matrix(1, nrow = 6, ncol = 10)
-  expected8 <- matrix(1, nrow = 8, ncol = 10)
-  expect_equal(.trim_top_bottom(image, trimAmountTop = 2, trimAmountBottom = 2), expected6)
-  expect_equal(.trim_top_bottom(image, trimAmountTop = 0, trimAmountBottom = 2), expected8)
-  expect_equal(.trim_top_bottom(image, trimAmountTop = 2, trimAmountBottom = 0), expected8)
-})
-
-
-
 context(desc = ".process_image")
 test_that("correct processed image gets returned to the user",{
   darkImage <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
@@ -241,19 +229,33 @@ test_that("correct line chosen for the bottom envelope for the image",{
 
 
 context(desc = ".isolating_trace")
-test_that("correct isolated image is returned to the user",{
+test_that("Correct isolated image is returned to the user",{
   image <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
   topEnvelope <- readRDS("~/magneto/tests/testData/MatTopEnv.RDS") # this is matrix scaled
   bottomEnvelope <- readRDS("~/magneto/tests/testData/MatTopLowerEnv.RDS")
   expected <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS")
+  WrongLengthEnv <- 1:100
   expect_equal(.isolating_trace(image, topEnv = topEnvelope, bottomEnv = bottomEnvelope), expected)
+  expect_error(.isolating_trace(image, topEnv = WrongLengthEnv, bottomEnv = bottomEnvelope),
+                 regexp = "ImageMatrix length differs from top or bottom env")
 })
 
 
 
-context(desc = ".env_start_end")
-test_that("correct start and end found for an isolated trace", {
-  image <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS") # this is a single trace matrix
-  expected <- list(Start = 312, End = 5869)
-  expect_equal(.env_start_end(image, returnMatrix = FALSE), expected)
+context(desc = ".get_image_year")
+test_that("Correct year is returned to the user",{
+  imageName1 <- "AGC--H-19260103-19260105.tif"
+  imageName2 <- "AGC-H-19260103-19260105.tif"
+  imageName3 <- "AGC-H-19341230-19341231-README.tif"
+  imageName4 <- "AGC--H-19341230-19341231-README.tif"
+  expected12 <- "1926"
+  expected34 <- "1934"
+  expect_equal(.get_image_year(imageName1), expected12)
+  expect_equal(.get_image_year(imageName2), expected12)
+  expect_equal(.get_image_year(imageName3), expected34)
+  expect_equal(.get_image_year(imageName4), expected34)
 })
+
+
+#.dir_str is checked, just dont want to create dir, so didnt make a test for it.
+

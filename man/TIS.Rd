@@ -161,10 +161,15 @@ checks for abnormal spikes in the tracing algorithm, could be due to a jump from
 \description{
 Combines all other functions to allow the user to digitize one image.
 All parameters are adjustable to allow for attempts to digitize more then one
-type of image
+type of image.  Recommended to experiment with all individual functions, then set
+parameters in this function to do the total digitiziation.
 }
 \details{
 Beta 0 and Beta1 are required for the brightness, changes the method for the
 image processing, if an image is bright, the parameters change to try and remove
-the over exposure so the envelopes can be more accurate around a trace.
+the over exposure so the envelopes can be more accurate around a trace. These
+can be found using a logistic regression with the predictor of the proportion of
+pixels above 0.8 scaled by the total number of pixels.  The user imput the response
+variable, a decision of 0(not bright) and 1(bright) for a large number of images,
+to "train" the algorithm what to decide.
 }

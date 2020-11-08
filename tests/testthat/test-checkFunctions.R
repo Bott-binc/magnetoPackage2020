@@ -47,37 +47,18 @@ test_that("Checking for a change from vertical to horozontal",{
 
 
 
-# context(desc = ".array_clas_edit")
-# test_that("Given array, edits correctly, if not array continues",{
-#   vector1 <- c(0.5,0.9,0.3)
-#   vector2 <- c(0.10,0.11,0.12,0.13,0.14,0.20)
-#   startArray <- array(c(vector1,vector2),dim = c(3,3,2))
-#   expected <- array(c(vector1, vector2), dim = c(3,3,1))
-# })
-
-
-
-context(desc = ".triple_check")
-test_that("Triple is identified and non triple is okay", {
-  triple <- readRDS("~/magneto/tests/testData/imageProcessedTripleD-18880915.RDS")
-  bottomcutTrip <- readRDS("~/magneto/tests/testData/bottomcutD-18880915.RDS")
-  bottomcutDub <- readRDS("~/magneto/tests/testData/bottomCutH-19260103.RDS")
-  topcutTrip <- readRDS("~/magneto/tests/testData/topcutD-18880915.RDS")
-  topcutDub <- readRDS("~/magneto/tests/testData/topCutH-19260103.RDS")
-  double <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
-  expectedTriple <- TRUE
-  expectedDuble <- FALSE
-  expect_equal(.triple_check(triple, topCut = topcutTrip, bottomCut = bottomcutTrip), expectedTriple)
-  expect_equal(.triple_check(double, topCut = topcutDub, bottomCut = bottomcutDub), expectedDuble)
+context(desc = ".HDV_check")
+test_that("Correct HDV warning returned to user",{
+  imageNameNonHDV <- "AGC--H-19260103-19260105.tif"
+  imageNameHDV <- "AGC--HDZ-19260103-19260105.tif"
+  nonImageName <- "FontMatter1.tif"
+  nonImageName <- "Title.tif"
+  expect_equal(.hdv_check(imageNameNonHDV), NULL)
+  expect_warning(.hdv_check(imageNameHDV),
+                 regexp = "This image is a HDV or HDZ")
+  expect_warning(.hdv_check(nonImageName),
+                 regexp = "This image is a HDV or HDZ")
+  expect_warning(.hdv_check(nonImageName),
+                 regexp = "This image is a HDV or HDZ")
 })
 
-
-
-context(desc = ".intersection_check")
-test_that("Intersection identified", {
-  imageName <-  "AGC-D-19211221-19211223.tif"
-  topLowerEnv <- readRDS("~/magneto/tests/testData/topLowerIntersection.RDS")
-  bottomUpperEnv <- readRDS("~/magneto/tests/testData/bottomUpperIntersection.RDS")
-  expect_warning(.intersection_check(topEnv = topLowerEnv, bottomEnv = bottomUpperEnv, imageName = imageName),
-                regexp = "There is an intersection at")
-})

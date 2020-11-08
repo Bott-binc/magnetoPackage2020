@@ -517,53 +517,6 @@
 
 
 
-#' Rough Trim
-#'
-#' trims roughly the top and bottom if the user knows where there will definitly not be any points
-#'
-#' @param image A matrix
-#' @param trimAmountTop Number of pixels
-#' @param trimAmountBottom Number of pixels
-#'
-#' @return the matrix without the specified bounds
-.trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom = 50){
-  if (trimAmountTop != 0 & trimAmountBottom != 0) {
-    imageProcessed <- image[-c(1:trimAmountTop, (nrow(image) - trimAmountBottom + 1):nrow(image)),]
-  }
-  else if (trimAmountTop != 0) {
-    imageProcessed <- image[-c(1:trimAmountTop),]
-  }
-  else if (trimAmountBottom != 0) {
-    imageProcessed <- image[-c((nrow(image) - trimAmountBottom + 1):nrow(image)),]
-  }
-  return(imageProcessed)
-}
-
-
-
-#' Rough Trim for Sides
-#'
-#' trims roughly the right and left sides if the user knows where there will definitely not be any points
-#'
-#' @param trimAmountLeft in percentage
-#' @param trimAmountRight in percentage
-#' @param image A matrix
-#'
-#' @return the matrix without the specified bounds
-.trim_Sides <- function(image, trimAmountLeft = 2, trimAmountRight = 2){
-  leftPerc <- trimAmountLeft/100
-  rightPerc <- trimAmountRight/100
-  if (leftPerc != 0 & rightPerc != 0) {
-    imageProcessed <- image[,-c(0:(leftPerc*ncol(image)), (ncol(image) - rightPerc*ncol(image)):ncol(image))]
-  }
-  else if (leftPerc != 0) {
-    imageProcessed <- image[,-c(0:(leftPerc*ncol(image)))]
-  }
-  else if (rightPerc != 0) {
-    imageProcessed <- image[,-c((ncol(image) - rightPerc*ncol(image)):ncol(image))]
-  }
-  return(imageProcessed)
-}
 
 
 #' Process Image
@@ -902,112 +855,6 @@
 
 
 
-
-#' Envelope Starts and Ends
-#'
-#' A better version of .get_image_starts_ends but meant for single traces that
-#' are isolated on their own picture.
-#'
-#' @param traceMatrix a single isolated trace, with only one trace(no timing on the plot)
-#' @param thresh How far it will go before deciding were already past the numbers at start of traces
-#' @param returnMatrix Willl return the cut matrix if TRUE, if FALSE will return list of the Start and End
-#'
-#' @return list of the Start and End or cut matrix
-.env_start_end <- function(traceMatrix, thresh = 300, returnMatrix = TRUE){
-  startFound <- FALSE
-  endFound <- FALSE
-  indicatorStart <- FALSE
-  indicatorEnd <- FALSE
-  gapLength <- 0
-
-  #Starting at the left side
-  for (i in 1:ncol(traceMatrix)) {
-    if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isFALSE(indicatorStart)) {
-      #browser()
-      startFound <- TRUE
-      possibleStarts <- i
-      counter <- i
-      if (isTRUE(indicatorStart)) {
-        break # need this to exit for loop
-      }
-    }
-    #done the gap after the first found, seeing if the length is correct
-    else if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
-      possibleStarts <- i
-      if (gapLength > 20) {
-        break
-      }
-      else{
-        gapLength <- 0
-        possibleStarts <- counter
-        indicatorStart <- FALSE
-        startFound <- TRUE
-      }
-    }
-    else if (sum(traceMatrix[,i]) == 0 & isTRUE(startFound)) {
-      if (counter + thresh > i) { #the new gap was found within the threshold limit
-
-        startFound <- FALSE
-        indicatorStart <- TRUE # this is the second time through the first part
-        #( therefore past the number at the first of the trace)
-        next
-      }
-    }
-    #the intermediate part, foun a first start and a second start, seeing how long it is
-    else if (sum(traceMatrix[,i]) == 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
-      gapLength <- gapLength + 1
-    }
-  }
-  gapLength <- 0
-  #now starting at the other side of the image
-  for (j in 1:(ncol(traceMatrix) - 1)) {
-    i <- ncol(traceMatrix) - j
-    if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isFALSE(indicatorEnd)) {
-      endFound <- TRUE
-      possibleEnds <- i
-      counter <- i
-      if (isTRUE(indicatorEnd)) {
-        break # need this to exit for loop
-      }
-    }
-    #done the gap after the first found, seeing if the length is correct
-    else if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
-      possibleEnds <- i
-      if (gapLength > 20) {
-        break
-      }
-      else{
-        gapLength <- 0
-        possibleEnds <- counter
-        indicatorEnd <- FALSE
-        endFound <- TRUE
-      }
-    }
-    else if (sum(traceMatrix[,i]) == 0 & isTRUE(endFound)) {
-      if (counter - thresh < i) { #the new gap was found within the threshold limit
-
-        endFound <- FALSE
-        indicatorEnd <- TRUE # this is the second time through the first part
-        #( therefore past the number at the first of the trace)
-        next
-      }
-    }
-    #the intermediate part, found a first start and a second start, seeing how long it is
-    else if (sum(traceMatrix[,i]) == 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
-      gapLength <- gapLength + 1
-    }
-  }
-  if (isFALSE(returnMatrix)) {
-    return(list(Start = possibleStarts, End = possibleEnds))
-  }
-  else {
-    return(traceMatrix[,possibleStarts:possibleEnds])
-  }
-
-}
-
-
-
 #' Get Year From Image Name
 #'
 #' @param imageName a string
@@ -1040,6 +887,7 @@
   }
   else {
     dir.create(paste0(pathToWorkingDir, "/", year, "/"))
+    dir.create(paste0(pathToWorkingDir, "/", year, "/", "FailedToProcess/"))
     pwd <- paste0(pathToWorkingDir, "/", year, "/")
     return(pwd)
   }

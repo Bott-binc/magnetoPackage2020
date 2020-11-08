@@ -198,7 +198,7 @@ import_process_image <- function(imageName, file_loc, trimAmountTop = 100,
 
   imageRAW <- tiff_import(fileName = imageName, fileLoc = file_loc)
   image <- .horizontal_image_check(imageRAW)
-  imagecut <- .trim_top_bottom(image,
+  imagecut <- trim_top_bottom(image,
                                trimAmountTop = 100,
                                trimAmountBottom = 50) #takes off the usual flair spots
   imageMatrix <- .process_image(imagecut,
@@ -438,7 +438,8 @@ isolate_traces <- function(imageMatrix, topEnvelope, topLowerEnvelope,
 #' @export
 plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEnds,
                         bottomStartEnds, topTrace, bottomTrace, maxNoise = 250,
-                        max_roc = 35, sepDist = 10, pathToWorkingDir = "~/", imageName){
+                        max_roc = 35, sepDist = 10, pathToWorkingDir = "~/", imageName,
+                        intersectionFlag = FALSE){
   #Adjusting the length of the top and bottom trace to be the same as the imageMatrix
   startTop <- vector()
   startTop[0:(topStartEnds$Start - 1)] <- topTrace[1]
@@ -457,9 +458,12 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
   plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageMatrix,
                                   bottomCut = bottomCut, returnType = "PlottingScaled",
                                   maxNoise = maxNoise, max_roc = max_roc, sepDist = sepDist)
-
-  png(paste0(pathToWorkingDir, imageName, "-plot", ".png"))
-  suppressWarnings(plot(imageMatrix))
+  if (isFALSE(intersectionFlag)) {
+    png(paste0(pathToWorkingDir, imageName, "-plot", ".png"))
+  }else{# is an intersection so we consider it a fail process
+    png(paste0(pathToWorkingDir, imageName, "-FailToProcess", "-plot", ".png"))
+  }
+  suppressWarnings(rtiff::plot.matrix(imageMatrix))
   lines(plotEnvelopes$TopEnvelope, col = "green")
   lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
   lines(plotEnvelopes$BottomUpperEnvelope, col = "green")
@@ -489,10 +493,11 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
 #' @export
 plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
                                imageName){
-  newPathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+  #ifelse(!dir.exists( file.path(pathToWorkingDir, "FailedToProcess")), dir.create( file.path(pathToWorkingDir, "FailedToProcess")), FALSE)
+  #newPathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
   # 2. Create a plot
-  png(paste0(newPathToWorkingDir, imageName, "-FailProcess-Plot",".png"))
-  suppressWarnings(plot(imageMatrix))
+  png(paste0(pathToWorkingDir, imageName, "-FailToProcess-Plot",".png"))
+  suppressWarnings(rtiff::plot.matrix(imageMatrix))
   abline(h = (nrow(imageMatrix) - topCut), col = "green")
   abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
   text("This Isn't Processed", x = 3000, y = 1500, col = "orange")
@@ -500,6 +505,277 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
   dev.off()
 }
 
+
+
+#' Rough Trim for Sides
+#'
+#' trims the right and left sides if the user knows where there will definitely not be any points
+#'
+#' @param trimAmountLeft in percentage
+#' @param trimAmountRight in percentage
+#' @param image A matrix
+#'
+#' @return the matrix without the specified bounds
+#' @export
+trim_sides <- function(image, trimAmountLeft = 2, trimAmountRight = 2){
+  leftPerc <- trimAmountLeft/100
+  rightPerc <- trimAmountRight/100
+  if (leftPerc > 1 || rightPerc > 1) {
+    return(stop("The percentage cant be over 100"))
+  }
+  if (leftPerc != 0 & rightPerc != 0) {
+    imageProcessed <- image[,-c(1:round((leftPerc*ncol(image))), (ncol(image) + 1 - round(rightPerc*ncol(image))):ncol(image))]
+  }
+  else if (leftPerc != 0) {
+    imageProcessed <- image[,-c(1:round((leftPerc*ncol(image))))]
+  }
+  else if (rightPerc != 0) {
+    imageProcessed <- image[,-c((ncol(image) + 1 - round(rightPerc*ncol(image))):ncol(image))]
+  }
+  return(imageProcessed)
+}
+
+
+
+#' Trim on top and bottom of the image in pixels for consistency
+#'
+#' trims  the top and bottom if the user knows where there will definitely not be any points
+#'
+#' @param image A matrix
+#' @param trimAmountTop Number of pixels
+#' @param trimAmountBottom Number of pixels
+#'
+#' @return the matrix without the specified bounds
+#' @export
+trim_top_bottom <- function(image, trimAmountTop = 100, trimAmountBottom = 50){
+  if (trimAmountTop + trimAmountBottom > nrow(image)) {
+    return(stop("You have trimmed all the image, peakse reduce trim amounts"))
+  }
+  if (trimAmountTop != 0 & trimAmountBottom != 0) {
+    imageProcessed <- image[-c(1:trimAmountTop, (nrow(image) - trimAmountBottom + 1):nrow(image)),]
+  }
+  else if (trimAmountTop != 0) {
+    imageProcessed <- image[-c(1:trimAmountTop),]
+  }
+  else if (trimAmountBottom != 0) {
+    imageProcessed <- image[-c((nrow(image) - trimAmountBottom + 1):nrow(image)),]
+  }
+  return(imageProcessed)
+}
+
+
+
+#' Envelope Starts and Ends
+#'
+#' A better version of .get_image_starts_ends but meant for single traces that
+#' are isolated on their own picture.
+#'
+#' @param traceMatrix a single isolated trace, with only one trace(no timing on the plot)
+#' @param thresh How far it will go before deciding were already past the numbers at start of traces
+#' @param returnMatrix Will return the cut matrix if TRUE, if FALSE will return list of the Start and End
+#' @param gapLengthCutoff How Large the gap between the text and the trace must be in order to consider that
+#' point the new start, if gap is less then cutoff, will keep looking until it gets to the thresh value
+#'
+#' @return list of the Start and End or cut matrix
+#' @export
+env_start_end <- function(traceMatrix, thresh = 300, gapLengthCutoff = 20, returnMatrix = TRUE){
+  startFound <- FALSE
+  endFound <- FALSE
+  indicatorStart <- FALSE
+  indicatorEnd <- FALSE
+  gapLength <- 0
+
+  #Starting at the left side
+  for (i in 1:ncol(traceMatrix)) {
+    if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isFALSE(indicatorStart)) {
+      #browser()
+      startFound <- TRUE
+      possibleStarts <- i
+      counter <- i
+      if (isTRUE(indicatorStart)) {
+        break # need this to exit for loop
+      }
+    }
+    #done the gap after the first found, seeing if the length is correct
+    else if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
+      possibleStarts <- i
+      if (gapLength > gapLengthCutoff) {
+        break
+      }
+      else{
+        gapLength <- 0
+        possibleStarts <- counter
+        indicatorStart <- FALSE
+        startFound <- TRUE
+      }
+    }
+    else if (sum(traceMatrix[,i]) == 0 & isTRUE(startFound)) {
+      if (counter + thresh > i) { #the new gap was found within the threshold limit
+
+        startFound <- FALSE
+        indicatorStart <- TRUE # this is the second time through the first part
+        #( therefore past the number at the first of the trace)
+        next
+      }
+    }
+    #the intermediate part, foun a first start and a second start, seeing how long it is
+    else if (sum(traceMatrix[,i]) == 0 & isFALSE(startFound) & isTRUE(indicatorStart)) {
+      gapLength <- gapLength + 1
+    }
+  }
+  gapLength <- 0
+  #now starting at the other side of the image
+  for (j in 1:(ncol(traceMatrix) - 1)) {
+    i <- ncol(traceMatrix) - j
+    if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isFALSE(indicatorEnd)) {
+      endFound <- TRUE
+      possibleEnds <- i
+      counter <- i
+      if (isTRUE(indicatorEnd)) {
+        break # need this to exit for loop
+      }
+    }
+    #done the gap after the first found, seeing if the length is correct
+    else if (sum(traceMatrix[,i]) != 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
+      possibleEnds <- i
+      if (gapLength > gapLengthCutoff) {
+        break
+      }
+      else{
+        gapLength <- 0
+        possibleEnds <- counter
+        indicatorEnd <- FALSE
+        endFound <- TRUE
+      }
+    }
+    else if (sum(traceMatrix[,i]) == 0 & isTRUE(endFound)) {
+      if (counter - thresh < i) { #the new gap was found within the threshold limit
+
+        endFound <- FALSE
+        indicatorEnd <- TRUE # this is the second time through the first part
+        #( therefore past the number at the first of the trace)
+        next
+      }
+    }
+    #the intermediate part, found a first start and a second start, seeing how long it is
+    else if (sum(traceMatrix[,i]) == 0 & isFALSE(endFound) & isTRUE(indicatorEnd)) {
+      gapLength <- gapLength + 1
+    }
+  }
+  if (isFALSE(returnMatrix)) {
+    return(list(Start = possibleStarts, End = possibleEnds))
+  }
+  else {
+    return(traceMatrix[,possibleStarts:possibleEnds])
+  }
+
+}
+
+
+
+#' Intersection Check
+#'
+#' Takes to envelope lines and checks to see if the lower is higher then the
+#' upper
+#'
+#' @param topEnv The top envelope of the comparison
+#' @param bottomEnv The bottom envelope of the comparison
+#' @param imageName Name of the image for the warning if cross
+#' @param rmAmount The amount ignored from both the right and left sides
+#' of the image where possible trace lines could intersect because of noise
+#' This is to ensure that false intersections aren't found between the two traces
+#' @return warning if there is an intersection
+#' @export
+intersection_check <- function(topEnv, bottomEnv, imageName, rmAmount = 300){
+  for (m in rmAmount:(min(c(length(bottomEnv), length(topEnv))) - rmAmount)) { #Checking for intersection between the two lines
+    if (topEnv[m] >= bottomEnv[m]) { # reversed because indexing is upsidedown for images
+      return(warning(paste0("There is an intersection at (", topEnv[m], ", ", m, ")")))
+
+    }
+  }
+  return(FALSE) # there is no intersection in the bounds
+}
+
+
+#' Trace Spike Check
+#'
+#' Looks for abnormal spikes in the trace that wasn't smoothed out before
+#'
+#' @param trace a single trace
+#' @param spikeThreshold how big the difference has to be to be considered to be a spike
+#'
+#' @return
+#' @export
+spike_check <- function(trace, spikeThreshold = 50){
+  if (length(which(abs(diff(trace)) > spikeThreshold)) > 0) {
+    return(warning("abnormal spike in the top trace"))
+  }
+  else(return(NULL))
+}
+
+
+
+#' Triple Trace Checking
+#'
+#' Using find_peaks, checks for three traces on the same Image, These can't be done
+#' currently by this alg
+#'
+#' @param imageMatrix Horizontal image processed
+#' @param minDistance The min distance aloud between found peaks
+#' @param thresholdHeight How separated the heights of the three peaks can be
+#' @param thresholdDistance How far the timing lines can be from each other(
+#' saves the cases when the peaks are same height as the timing traces)
+#' @param percentFromEdge the distance alows from the edge of the image
+#' @param topCut from .topCut() line between the text and the two traces
+#' @param bottomCut from .bottomCut() line after traces before the two timing marks
+#' @param threshCutImage how much different the peak heights have to be in the cut image
+#' for the image to be considered to be a triple.
+#'
+#' @return TRUE or FALSE for finding a triple or not
+#' @export
+triple_check <- function(imageMatrix, topCut, bottomCut, minDistance = 50, percentFromEdge = 2, thresholdHeight = 200,
+                          thresholdDistance = 250, threshCutImage = 500){
+  sums <- rowSums(imageMatrix)
+  tripleCheck <- find_peaks(sums, minDistance = minDistance, maxPeakNumber = 6,
+                            percentFromEdge = percentFromEdge, plots = FALSE)
+  sumsCut <- rowSums(imageMatrix[-c(0:topCut, bottomCut:nrow(imageMatrix)), ])
+  cutCheck <- find_peaks(sumsCut, minDistance = minDistance, maxPeakNumber = 4,
+                         percentFromEdge = percentFromEdge, plots = FALSE)
+  if (length(tripleCheck$Index) == 6) { # possible a triple so we check weather
+    #the timing peaks are close together in heights
+    #this can be an indication that there are possibly three traces on the image
+    if (tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[4] &
+        tripleCheck$Height[4] <= tripleCheck$Height[5] + thresholdHeight &
+        tripleCheck$Height[5] - thresholdHeight <= tripleCheck$Height[6] &
+        tripleCheck$Height[6] <= tripleCheck$Height[5] + thresholdHeight) {
+      #checking that the three peaks are sufficiently close to eachother
+      if (tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[4] &
+          tripleCheck$Index[4] <= tripleCheck$Index[5] + thresholdDistance &
+          tripleCheck$Index[5] - thresholdDistance <= tripleCheck$Index[6] &
+          tripleCheck$Index[6] <= tripleCheck$Index[5] + thresholdDistance) {
+        return(warning("Possible Triple Found"))
+      }
+    }
+  }
+  if (length(cutCheck$Index) == 4) { # possible a triple so we check weather
+    #the timing peaks are close together in heights ( for the cut image ( there will be four where there should be 2))
+    #this can be an indication that there are possibly three traces on the image
+
+    max <- max(cutCheck$Height)
+    count <- 0
+    for (i in 1:4) {
+      if (max + threshCutImage >= cutCheck$Height[i] &
+          max - threshCutImage <= cutCheck$Height[i]) {
+        count <- count + 1
+      }
+    }
+    # if two others are in that range then they are probabily a tripple set
+    if (count >= 3) {
+      return(warning("Possible Triple Found"))
+    }
+  }
+  return(FALSE) # this is if the other two dont return anything
+}
 
 
 
@@ -614,18 +890,21 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
   traceWarnings <- vector()
   typeCheck <- NULL # if you aren't using the HDV check
-  flag = FALSE
+  flag <- FALSE
+  intersectionFlag <- FALSE
+  rolledImage <- NULL
+  dirChangeFlag <- FALSE
   if (isTRUE(HDVcheck)) {
     # HDV Checking for Magnetograms ----------------------------------------------
     typeCheck <- tryCatch(.hdv_check(imageName), warning = function(w) w)
   }
   if (inherits(typeCheck, "warning")) {
-    return(typeCheck) # will return the warning if an HDV is found
+    return(warning(typeCheck)) # will return the warning if an HDV is found
   }
   else {
     # Process The Image ----------------------------------------------------------
 
-    imageMatrix <- import_process_image(imageName = imageName, file_loc = fileLoc,
+    imageMatrix <- tryCatch(import_process_image(imageName = imageName, file_loc = fileLoc,
                                         trimAmountTop = trimAmountTop,
                                         trimAmountBottom = trimAmountBottom, beta0 = beta0,
                                         beta1 = beta1, cutoffProbability = cutoffProbability,
@@ -634,46 +913,64 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                         methodBright = methodBright,
                                         methodNonBright = methodNonBright,
                                         thresholdBright = thresholdBright,
-                                        thresholdNonBright = thresholdNonBright)
+                                        thresholdNonBright = thresholdNonBright), error = function(e) e)
+    if (inherits(imageMatrix, "error")) {
+      return(as.character(imageMatrix))
+    }
     #takes off the usual flair spots
-    imageSideCut <- .trim_Sides(imageMatrix, trimAmountLeft = trimAmountLeft,
+    imageSideCut <- trim_sides(imageMatrix, trimAmountLeft = trimAmountLeft,
                                 trimAmountRight = trimAmountRight)
-    imageCut <- .trim_top_bottom(imageSideCut, trimAmountTop = trimAmountTop,
+    imageCut <- trim_top_bottom(imageSideCut, trimAmountTop = trimAmountTop,
                                  trimAmountBottom = trimAmountBottom)
 
 
     # Find the Top and Bottom Cut for the Image -----------------------------------
 
-    topBottomCuts <- find_cuts(imageCut, percentFromEdge = peakPercFromEdge,
+    topBottomCuts <- tryCatch(find_cuts(imageCut, percentFromEdge = peakPercFromEdge,
                                percentEdgeForLeft = peakPercentFromEdgeLeftSide,
                                cutPercentage = cutPercentage,
-                               shortestAllowedSeqOfZeros = shortestAllowedSeqOfZeros)
+                               shortestAllowedSeqOfZeros = shortestAllowedSeqOfZeros), error = function(e) e)
+    if (inherits(topBottomCuts, "error")) {
+      return(as.character(topBottomCuts))
+    }
     topCut <- topBottomCuts$TopCut # line between the words and the top trace
     bottomCut <- topBottomCuts$BottomCut # line between the timing traces and the bottom trace
     if (inherits(topCut, "warning")) {
-      print(topBottomCuts$TopCut)
       traceWarnings <- append(traceWarnings, topCut)
+      if (isFALSE(dirChangeFlag)) {
+      pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+      dirChangeFlag <- TRUE
+      }
       flag = TRUE #wont process, but will put a plot out into the pwd
       topCut <- 0
     }
     if (inherits(bottomCut, "warning")) {
-      print(topBottomCuts$BottomCut)
       traceWarnings <- append(traceWarnings, bottomCut)
+      if (isFALSE(dirChangeFlag)) {
+        pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+        dirChangeFlag <- TRUE
+      }
       flag = TRUE #wont process, but will put a plot out into the pwd
       bottomCut <- nrow(imageCut)
     }
   }
   if (isFALSE(flag)) {
     # Check for a Triple Set of Traces -------------------------------------------
-    tripleBool <- .triple_check(imageMatrix = imageCut, topCut = topCut,
+    tripleBool <- tryCatch(triple_check(imageMatrix = imageCut, topCut = topCut,
                                 bottomCut = bottomCut, minDistance = tripleCheckMinDistance,
                                 percentFromEdge = peakPercFromEdge, thresholdHeight = tripleThresholdHeight,
-                                thresholdDistance = tripleThresholdDistance, threshCutImage = threshCutImage) #checking for triple trace images
-    if (isTRUE(tripleBool)) {
-      print(paste0("possible triple found! ", imageName))
+                                thresholdDistance = tripleThresholdDistance, threshCutImage = threshCutImage),
+                           warning = function(w) w) #checking for triple trace images
+    if (inherits(tripleBool, "warning")) {
+      traceWarnings <- append(traceWarnings, tripleBool)
+      if (isFALSE(dirChangeFlag)) {
+        pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+        dirChangeFlag <- TRUE
+      }
+      flag = TRUE
     }
     # No Errors Found, Creating The Actual Traces --------------------------------
-    else {
+    # else {
 
       # Creating Envelopes ---------------------------------------------------------
       # Gets rid of small gaps
@@ -694,20 +991,24 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                       bottomUpperEnvelope = matrixEnvelopes$BottomUpperEnvelope,
                                       bottomEnvelope = matrixEnvelopes$BottomEnvelope)
 
-      TopStartsEnds <- .env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
+      TopStartsEnds <- env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
                                       returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
-      BottomStartsEnds <- .env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
+      BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
                                          returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
 
       # Checking Envelopes for Intersections ---------------------------------------
 
-      intersection <- tryCatch(.intersection_check(topEnv = matrixEnvelopes$TopLowerEnvelope,
+      intersection <- tryCatch(intersection_check(topEnv = matrixEnvelopes$TopLowerEnvelope,
                                                    bottomEnv = matrixEnvelopes$BottomUpperEnv,
                                                    imageName, rmAmount = intersetionRemoveAmount),
                                warning = function(w) w)
       if (inherits(intersection, "warning")) {
-        print(intersection)
         traceWarnings <- append(traceWarnings, intersection)
+        if (isFALSE(dirChangeFlag)) {
+          pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+          dirChangeFlag <- TRUE
+        }
+        intersectionFlag <- TRUE
       }
 
       # Creating the Two Traces ----------------------------------------------------
@@ -729,45 +1030,137 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                   loopNumber = loopNumber)
 
       # Checking for spikes in the traces ------------------------------------------
-      topTraceSpikeCheck <- tryCatch(.spike_check(topTrace, spikeThreshold = spikeThreshold))
-      bottomTraceSpikeCheck <- tryCatch(.spike_check(bottomTrace, spikeThreshold = spikeThreshold))
+      topTraceSpikeCheck <- tryCatch(spike_check(topTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
+      bottomTraceSpikeCheck <- tryCatch(spike_check(bottomTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
       if (inherits(topTraceSpikeCheck, "warning") || inherits(bottomTraceSpikeCheck, "warning")) {
         if (!is.null(topTraceSpikeCheck)) {
-          print(topTraceSpikeCheck)
           traceWarnings <- append(traceWarnings, topTraceSpikeCheck)
+          if (isFALSE(intersectionFlag)){ # so we still get the full plot but it goes to the correct place
+            if (isFALSE(dirChangeFlag)) {
+              pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+              dirChangeFlag <- TRUE
+            }
+            intersectionFlag <- TRUE
+          }
         }
-        if (!is.null(bottomTraceSpikeCheck)) {
-          print(bottomTraceSpikeCheck)
+        if (!is.null(bottomTraceSpikeCheck)) { # Sp we still get the full plot but it goes to the correct place
           traceWarnings <- append(traceWarnings, bottomTraceSpikeCheck)
+          if (isFALSE(intersectionFlag)){
+            if (isFALSE(dirChangeFlag)) {
+              pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+              dirChangeFlag <- TRUE
+            }
+            intersectionFlag <- TRUE
+          }
         }
       }
 
-    }
+    #}
 
 
   }
   # Plotting (if applicable) ---------------------------------------------------
-  if (isTRUE(plotPNG) & isFALSE(flag)) {
-    plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
-                 bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
-                 topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
-                 sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName)
+  if (isTRUE(plotPNG)){
+    if (isFALSE(flag)) {
+      plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
+                   bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
+                   topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
+                   sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
+                   intersectionFlag = intersectionFlag) # adds fail to process dir on if intersection but keeps all info
 
 
+      totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
+                          PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
+                          TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
+                          BottomTraceMatrix = bottomTrace,
+                          BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+    if  (isTRUE(flag)) {
+      plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
+                         ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
+
+      totalReturn <- list(ImageCutMatrix = imageCut,
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
   }
-  if (isTRUE(plotPNG) & isTRUE(flag)) {
-    plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
-                       ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
+  else{
+    if (isFALSE(flag)) {
+      totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
+                          PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
+                          TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
+                          BottomTraceMatrix = bottomTrace,
+                          BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+    if  (isTRUE(flag)) {
+      totalReturn <- list(ImageCutMatrix = imageCut,
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
   }
-  totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
-                      PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
-                      TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
-                      BottomTraceMatrix = bottomTrace,
-                      BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
-                      Cuts = list(TopCut = topCut, BottomCut = bottomCut),
-                      Warnings = traceWarnings)
+
+
   return(totalReturn)
 }
 
 
 
+#' TIS_automation
+#' @return
+#' @export
+TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInImageName, ignoreErrorMessage = FALSE){
+
+  # Dimension check on the DigitizationTODO Dataframe
+  if (dim.data.frame(DigitizationTODO)[2] != 6) {
+    Error <- "Your dataframe has the wrong dimentions, should be 6 columns with 3rd being TRUE or FALSE"
+    return(stop(Error))
+  }
+  foundWithKeyword <- grep(keywordInImageName, x = DigitizationTODO$ImageName) # Find all images in DigitizationTODO
+  #with that keyword
+
+  for (i in foundWithKeyword) {
+
+    if (DigitizationTODO$DigitizedYet[i] == "FALSE") { # Checking if digitized yet
+      filePath <- as.character(DigitizationTODO$ImagePath[i])
+      imageName <- as.character(DigitizationTODO$ImageName[i])
+
+      ErrorMessage <- DigitizationTODO$ErrorWhenDigitized[i]
+      if (is.na(ErrorMessage) || isTRUE(ignoreErrorMessage)) { # If there is an error message about the data (like there isn't any data)
+
+        # Check for the year directory, if doesn't exist, it is created
+        imagePWD <- .dir_Str(imageName = imageName, pathToWorkingDir = pathToDigitizationDir)
+
+        # Do the digitization
+        Digitization <- TIS(imageName = imageName, fileLoc = filePath, pathToWorkingDir = imagePWD, HDVcheck = TRUE)
+
+        # Different outcomes for the digitization attempt
+        if (length(Digitization$Warnings) == 0) { # no warnings, therefore a sucessfull digitization
+          DigitizationTODO$DigitizedYet[i] = TRUE
+          DigitizationTODO$DigitizationPath[i] = imagePWD
+          DigitizationTODO$DigitizationName[i] = paste0(imageName, "-Digitized,RDS")
+          saveRDS(Digitization, file = paste0(imagePWD, imageName, "-Digitized.RDS"))
+        }
+        else if (inherits(Digitization, "warning")) { #Should only happen if there is an HDV warning
+          print(Digitization)
+          DigitizationTODO$ErrorWhenDigitized[i] == Digitization
+        }
+        else {# there are warnings so, it is considered to be a failed to process not considered to be digitized yet
+          print(Digitization$Warnings)
+          DigitizationTODO$ErrorWhenDigitized[i] == Digitization$Warnings
+          saveRDS(Digitization, file = paste0(imagePWD,"FailedToProcess/", imageName, "-FailToProcess-Data.RDS"))
+        }
+      }
+      else {
+        print("Skipping.. previous error when digitizing")
+        print(DigitizationTODO$ErrorWhenDigitized[i])
+      }
+    }
+    print("-----------")
+    write.csv(DigitizationTODO, file = DigitizationTODOFileNameAndPath) # updates the .csv
+    #after each digitization so that we won't loose any data
+  }
+}
