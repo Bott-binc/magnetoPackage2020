@@ -45,7 +45,8 @@ not_empty_file <- function(filePath, fileName){
   if (is.na(filePath) ||  is.na(fileName)) {
     return(stop("missing filePath or fileName"))
   }
-  if (is.na(as.character(file.info(paste0(filePath, fileName))[9]))){
+  #used [4] just in case the image is corrupt(NA size)
+  if (is.na(as.character(file.info(paste0(filePath, fileName))[4]))){
     return(stop(paste0("The file ", filePath, fileName, " doesn't exist")))
   }
   if (as.numeric(file.info(paste0(filePath,fileName))[1]) != 0) {
