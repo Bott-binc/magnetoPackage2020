@@ -253,7 +253,9 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #'
 #' @return list of all four envelopes
 #' @export
-find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType, sepDist = 10, max_roc = 25, maxNoise = 100){
+find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
+                           sepDist = 10, max_roc = 25, maxNoise = 100,
+                           improveTopEnvelope = NA, improveBottomEnvelope = NA){
 
   topEnv <- .top_env(rolledImage = rolledImage, max_roc = max_roc,
                      sepDist = sepDist, maxNoise = maxNoise)
@@ -1163,4 +1165,363 @@ TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInIma
     write.csv(DigitizationTODO, file = DigitizationTODOFileNameAndPath) # updates the .csv
     #after each digitization so that we won't loose any data
   }
+}
+
+
+
+
+
+#' TISI: Trace Identification Through Separation for Improvement
+#'
+#' Combines all other functions to allow the user to digitize one image. This function
+#' allows for input of specific known envelopes set manually using the shiny application
+#' along with this function.
+#' All parameters are still adjustable like in TIS to allow for attempts to digitize more then one
+#' type of image.  Recommended to experiment with all individual functions, then set
+#' parameters in this function to do the total digitization.
+#'
+#' Beta 0 and Beta1 are required for the brightness, changes the method for the
+#' image processing, if an image is bright, the parameters change to try and remove
+#' the over exposure so the envelopes can be more accurate around a trace. These
+#' can be found using a logistic regression with the predictor of the proportion of
+#' pixels above 0.8 scaled by the total number of pixels.  The user imput the response
+#' variable, a decision of 0(not bright) and 1(bright) for a large number of images,
+#' to "train" the algorithm what to decide.
+#'
+#' @param imageName The name of the file
+#' @param fileLoc Path from ~/ to the dir where the file is
+#' @param pathToWorkingDir Path of where the plots should be saved to
+#' @param HDVcheck For Magneto project only, use FALSE otherwise
+#' @param plotPNG TRUE or FALSE if you want plots saved or just data returned
+#' @param trimAmountTop Number of pixels removed from top of image (usually for common flares)
+#' @param trimAmountBottom Number of pixels removed from bottom of image
+#' @param beta0 The intercept of a logistic regression default is for magnetograms
+#' Logistic regression on the decision if an image can be considered to be bright
+#' based off of a user deciding bright or non bright on a large set of images
+#' @param beta1 The slope of the logistic regression default is for magnetograms
+#' @param cutoffProbability The probability cut off for the decision of an imageMatrix being bright
+#' @param NADefault The default value to replace NA's found in the matrix
+#' @param FilterBright Vector specifying the dimensions of the kernel,
+#' which will be used to perform either delation or erosion, such as c(13,13)
+#' @param FilterNonBright Vector specifying the dimensions of the kernel,
+#' which will be used to perform either delation or erosion, such as c(8,8)
+#' @param methodBright For bright images, choose 'delation'(adds to image, making brights brighter) or
+#' 'erosion' (subtracts from image, making brights darker) to occur during processing
+#' @param methodNonBright For non bright images, choose 'delation'(adds to image, making brights brighter) or
+#' 'erosion' (subtracts from image, making brights darker) to occur during processing
+#' @param thresholdBright should be between 0 and 1 for black and white pixels, where the Default = 0.8
+#' anything over the threshold will be 1(white) and anything under will be turned to 0(black)
+#' @param thresholdNonBright should be between 0 and 1 for black and white pixels, where the Default = 0.5
+#' anything over the threshold will be 1(white) and anything under will be turned to 0(black)
+#' @param trimAmountRight Percentage of the image that is guaranteed to not have
+#' any trace in it(mostly used to remove over exposure from the scanning process)
+#' @param trimAmountLeft Percentage of the image that is guaranteed to not have
+#' any trace in it(mostly used to remove over exposure from the scanning process)
+#' @param peakPercFromEdge Used in find_peaks if you know there won't be any relevant data in that region
+#' for finding rowSum peaks. This percentage is removed from consideration in find_peaks
+#'  in a region (look at rowSums of the matrix to see the peaks for this parameter)
+#' @param peakPercentFromEdgeLeftSide Passed into find peaks, if not specified (NULL), uses
+#' peakPercFromEdge for both left and right sides. If specified, peakPercFromEdge
+#' is defaulted to just the right side of the plot
+#' (look at rowSums of the matrix to see the peaks for this parameter)
+#' @param cutPercentage Usually the min of either trimAmountLeft or trimAmountRight
+#' @param shortestAllowedSeqOfZeros Smallest gap allowed between the lower trace
+#' and the timing marks, before the trace is considered to intersect with the timing marks
+#' @param tripleCheckMinDistance Minimum distance allowed between found peaks from rowSums().  Ensures that the user
+#' has max one point per peak (only used for magneto, make large if not needed)
+#' @param tripleThresholdHeight How different the heights can be for three peaks
+#' to be considered to be a triple set of peaks (only used for magneto, make 0 if not needed)
+#' @param tripleThresholdDistance How far apart the peaks can be for the them to be
+#' considered to be a set of triples (only used for magneto, make large if not needed)
+#' @param threshCutImage Used in triple_check as a second way to check for triples,
+#' takes the cut image(no timing or writing on the image) it then finds peaks and checks for 3 peaks(a triple)
+#' Same definition as the tripleThresholdDistance but different value needed because different scale
+#' @param OffsetDistanceForEnvelopes How far off of the trace you would like the envelope to be
+#' used as a safety net to catch any parts of the trace that might not be detected
+#' @param maxEnvelopeROC The max difference (rate of change) between any two points of the trace envelope before
+#' the outlier point will be removed and considered to be noise, these are usually seen as jumps in the envelopes
+#' @param maxNoise The max amount of points created off of the trace before the
+#' envelope can be considered to be not filling in a gap but being off of the
+#' trace entirely, will correct after this number
+#' @param envelopeStartEndThreshold The default vertical start and end location for the trace lines,
+#' if they aren't found automatically
+#' @param intersetionRemoveAmount The amount ignored from both the right and left sides
+#' of the image where possible trace lines could intersect because of noise
+#' This is to ensure that false intersections aren't found between the two traces
+#' @param CreateTraceThreshold During the final digitization lines of traces,
+#' any difference found higher then the CreateTraceThreshold between any two points will be smoothed with a MA
+#' @param MARange The amount of points in each direction that the moving average
+#'  will look at to calculate the MA on (added to the region value for the whole MARange)
+#' @param region The number of points inside the MA that will be corrected to the MA value
+#' @param loopNumber The amount of times the MA Smoothing will happen, to guarantee elimination of other peaks that could be
+#' created from the MA
+#' @param spikeThreshold The difference in height between two pixels in the final digitization lines
+#' checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
+#' (anything above the threshold will be sent to warning)
+#' @param k See rollMean() in zoo package for details
+#'
+#' @return
+#' @export
+TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
+                HDVcheck = FALSE, plotPNG = TRUE,
+                improveTopBottomCuts = NA,
+                improveTopEnvelope = NA, improveBottomEnvelope = NA,
+                improveTopEnvelopeStartEnd = NA,
+                improveBottomEnvelopeStartEnd = NA,
+                trimAmountTop = 100,
+                trimAmountBottom = 50,
+                trimAmountLeft = 2,
+                trimAmountRight = 2,
+                trippleCheckIGNORE = FALSE,
+                intersectionCheckIGNORE = FALSE,
+                beta0 = -2.774327,
+                beta1 = 51.91687, cutoffProbability = 0.5,
+                NADefault = 0, FilterBright = c(13, 13),
+                FilterNonBright = c(8, 8),
+                methodBright = "delation",
+                methodNonBright = "delation",
+                thresholdBright = 0.8,
+                thresholdNonBright = 0.5,
+                peakPercFromEdge = 2, peakPercentFromEdgeLeftSide = 25,
+                cutPercentage = 2, shortestAllowedSeqOfZeros = 25,
+                tripleCheckMinDistance = 50, tripleThresholdHeight = 200,
+                tripleThresholdDistance = 250, threshCutImage = 500,
+                OffsetDistanceForEnvelopes = 10, maxEnvelopeROC = 35, maxNoise = 250,
+                envelopeStartEndThreshold = 300, intersetionRemoveAmount = 1000,
+                CreateTraceThreshold = 5, MARange = 6, region = 2,
+                loopNumber = 4, spikeThreshold = 50, k = 40){
+
+  traceWarnings <- vector()
+  typeCheck <- NULL # if you aren't using the HDV check
+  flag <- FALSE
+  intersectionFlag <- FALSE
+  rolledImage <- NULL
+  dirChangeFlag <- FALSE
+  if (isTRUE(HDVcheck)) {
+    # HDV Checking for Magnetograms ----------------------------------------------
+    typeCheck <- tryCatch(.hdv_check(imageName), warning = function(w) w)
+  }
+  if (inherits(typeCheck, "warning")) {
+    return(warning(typeCheck)) # will return the warning if an HDV is found
+  }
+  else {
+    # Process The Image ----------------------------------------------------------
+
+    imageMatrix <- tryCatch(import_process_image(imageName = imageName, file_loc = fileLoc,
+                                                 trimAmountTop = trimAmountTop,
+                                                 trimAmountBottom = trimAmountBottom, beta0 = beta0,
+                                                 beta1 = beta1, cutoffProbability = cutoffProbability,
+                                                 NADefault = NADefault, FilterBright = FilterBright,
+                                                 FilterNonBright = FilterNonBright,
+                                                 methodBright = methodBright,
+                                                 methodNonBright = methodNonBright,
+                                                 thresholdBright = thresholdBright,
+                                                 thresholdNonBright = thresholdNonBright), error = function(e) e)
+    if (inherits(imageMatrix, "error")) {
+      return(as.character(imageMatrix))
+    }
+    #takes off the usual flair spots
+    imageSideCut <- trim_sides(imageMatrix, trimAmountLeft = trimAmountLeft,
+                               trimAmountRight = trimAmountRight)
+    imageCut <- trim_top_bottom(imageSideCut, trimAmountTop = trimAmountTop,
+                                trimAmountBottom = trimAmountBottom)
+
+
+    # Find the Top and Bottom Cut for the Image -----------------------------------
+
+    if (!is.na(improveTopBottomCuts)){
+      if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
+        topCut <- improveTopBottomCuts[1]
+        bottomCut <- improveTopBottomCuts[2]
+      }
+      else{
+        return(warning("wrong number of items in the
+                       vector for top and bottom cuts should be length 2"))
+      }
+   }
+    else{
+      topBottomCuts <- tryCatch(find_cuts(imageCut, percentFromEdge = peakPercFromEdge,
+                                          percentEdgeForLeft = peakPercentFromEdgeLeftSide,
+                                          cutPercentage = cutPercentage,
+                                          shortestAllowedSeqOfZeros = shortestAllowedSeqOfZeros),
+                                error = function(e) e)
+      if (inherits(topBottomCuts, "error")) {
+        return(as.character(topBottomCuts))
+      }
+      topCut <- topBottomCuts$TopCut # line between the words and the top trace
+      bottomCut <- topBottomCuts$BottomCut # line between the timing traces and the bottom trace
+      if (inherits(topCut, "warning")) {
+        traceWarnings <- append(traceWarnings, topCut)
+        if (isFALSE(dirChangeFlag)) {
+          pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+          dirChangeFlag <- TRUE
+        }
+        flag = TRUE #wont process, but will put a plot out into the pwd
+        topCut <- 0
+      }
+      if (inherits(bottomCut, "warning")) {
+        traceWarnings <- append(traceWarnings, bottomCut)
+        if (isFALSE(dirChangeFlag)) {
+          pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+          dirChangeFlag <- TRUE
+        }
+        flag = TRUE #wont process, but will put a plot out into the pwd
+        bottomCut <- nrow(imageCut)
+      }
+    }
+  }
+  if (isFALSE(flag)) {
+    # Check for a Triple Set of Traces -------------------------------------------
+    if(isFALSE(trippleCheckIGNORE)){
+      tripleBool <- tryCatch(triple_check(imageMatrix = imageCut, topCut = topCut,
+                                          bottomCut = bottomCut, minDistance = tripleCheckMinDistance,
+                                          percentFromEdge = peakPercFromEdge, thresholdHeight = tripleThresholdHeight,
+                                          thresholdDistance = tripleThresholdDistance, threshCutImage = threshCutImage),
+                             warning = function(w) w) #checking for triple trace images
+      if (inherits(tripleBool, "warning")) {
+        traceWarnings <- append(traceWarnings, tripleBool)
+        if (isFALSE(dirChangeFlag)) {
+          pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+          dirChangeFlag <- TRUE
+        }
+        flag = TRUE
+      }
+    }
+    # No Errors Found, Creating The Actual Traces --------------------------------
+    # else {
+
+    # Creating Envelopes ---------------------------------------------------------
+    # Gets rid of small gaps
+    rolledImage <- mean_roll_image(imageMatrix = imageCut, topcut = topCut,
+                                   bottomcut =  bottomCut, fill = "extend", k = k) #to get a more consistent image
+    # Creates the matrix scaled envelope
+    matrixEnvelopes <- find_envelopes(imageMatrix = imageCut, rolledImage = rolledImage, bottomCut = bottomCut,
+                                      returnType = "MatrixScaled", sepDist = OffsetDistanceForEnvelopes,
+                                      max_roc = maxEnvelopeROC, maxNoise = maxNoise)
+    # Creates the plotting scaled envelope for the return to the user
+    plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
+                                    bottomCut = bottomCut, returnType = "PlottingScaled",
+                                    maxNoise = maxNoise, max_roc = maxEnvelopeROC,
+                                    sepDist = OffsetDistanceForEnvelopes)
+    # Isolates both traces on their own plots
+    traceMatrices <- isolate_traces(imageCut, topEnvelope = matrixEnvelopes$TopEnvelope,
+                                    topLowerEnvelope = matrixEnvelopes$TopLowerEnvelope,
+                                    bottomUpperEnvelope = matrixEnvelopes$BottomUpperEnvelope,
+                                    bottomEnvelope = matrixEnvelopes$BottomEnvelope)
+
+    TopStartsEnds <- env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
+                                   returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+    BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
+                                      returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+
+    # Checking Envelopes for Intersections ---------------------------------------
+    if (isFALSE(intersectionCheckIGNORE)){
+      intersection <- tryCatch(intersection_check(topEnv = matrixEnvelopes$TopLowerEnvelope,
+                                                  bottomEnv = matrixEnvelopes$BottomUpperEnv,
+                                                  imageName, rmAmount = intersetionRemoveAmount),
+                               warning = function(w) w)
+      if (inherits(intersection, "warning")) {
+        traceWarnings <- append(traceWarnings, intersection)
+        if (isFALSE(dirChangeFlag)) {
+          pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+          dirChangeFlag <- TRUE
+        }
+        intersectionFlag <- TRUE
+      }
+    }
+
+    # Creating the Two Traces ----------------------------------------------------
+
+    topTrace <- create_trace(traceMatrix = traceMatrices$TopTraceMatrix,
+                             start = TopStartsEnds$Start,
+                             end = TopStartsEnds$End,
+                             topEnv = matrixEnvelopes$TopEnvelope,
+                             bottomEnv =  matrixEnvelopes$TopLowerEnvelope,
+                             thresh = CreateTraceThreshold,
+                             MARange = MARange, region = region, loopNumber = loopNumber)
+    bottomTrace <- create_trace(traceMatrix = traceMatrices$BottomTraceMatrix,
+                                start =  BottomStartsEnds$Start,
+                                end =  BottomStartsEnds$End,
+                                topEnv = matrixEnvelopes$BottomUpperEnvelope,
+                                bottomEnv = matrixEnvelopes$BottomEnvelope,
+                                thresh = CreateTraceThreshold,
+                                MARange = MARange, region = region,
+                                loopNumber = loopNumber)
+
+    # Checking for spikes in the traces ------------------------------------------
+    topTraceSpikeCheck <- tryCatch(spike_check(topTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
+    bottomTraceSpikeCheck <- tryCatch(spike_check(bottomTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
+    if (inherits(topTraceSpikeCheck, "warning") || inherits(bottomTraceSpikeCheck, "warning")) {
+      if (!is.null(topTraceSpikeCheck)) {
+        traceWarnings <- append(traceWarnings, topTraceSpikeCheck)
+        if (isFALSE(intersectionFlag)){ # so we still get the full plot but it goes to the correct place
+          if (isFALSE(dirChangeFlag)) {
+            pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+            dirChangeFlag <- TRUE
+          }
+          intersectionFlag <- TRUE
+        }
+      }
+      if (!is.null(bottomTraceSpikeCheck)) { # Sp we still get the full plot but it goes to the correct place
+        traceWarnings <- append(traceWarnings, bottomTraceSpikeCheck)
+        if (isFALSE(intersectionFlag)){
+          if (isFALSE(dirChangeFlag)) {
+            pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+            dirChangeFlag <- TRUE
+          }
+          intersectionFlag <- TRUE
+        }
+      }
+    }
+
+    #}
+
+
+  }
+  # Plotting (if applicable) ---------------------------------------------------
+  if (isTRUE(plotPNG)){
+    if (isFALSE(flag)) {
+      plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
+                   bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
+                   topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
+                   sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
+                   intersectionFlag = intersectionFlag) # adds fail to process dir on if intersection but keeps all info
+
+
+      totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
+                          PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
+                          TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
+                          BottomTraceMatrix = bottomTrace,
+                          BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+    if  (isTRUE(flag)) {
+      plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
+                         ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
+
+      totalReturn <- list(ImageCutMatrix = imageCut,
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+  }
+  else{
+    if (isFALSE(flag)) {
+      totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
+                          PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
+                          TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
+                          BottomTraceMatrix = bottomTrace,
+                          BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+    if  (isTRUE(flag)) {
+      totalReturn <- list(ImageCutMatrix = imageCut,
+                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Warnings = traceWarnings)
+    }
+  }
+
+
+  return(totalReturn)
 }
