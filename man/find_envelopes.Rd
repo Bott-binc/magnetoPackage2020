@@ -11,7 +11,11 @@ find_envelopes(
   returnType,
   sepDist = 10,
   max_roc = 25,
-  maxNoise = 100
+  maxNoise = 100,
+  improveTTopEnvelope = NA,
+  improveBTopEnvelope = NA,
+  improveTBottomEnvelope = NA,
+  improveBBottomEnvelope = NA
 )
 }
 \arguments{

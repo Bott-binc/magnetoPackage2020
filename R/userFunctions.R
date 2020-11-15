@@ -255,16 +255,63 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #' @export
 find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            sepDist = 10, max_roc = 25, maxNoise = 100,
-                           improveTopEnvelope = NA, improveBottomEnvelope = NA){
+                           improveTTopEnvelope = NA, improveBTopEnvelope = NA,
+                           improveTBottomEnvelope = NA,
+                           improveBBottomEnvelope = NA){
+browser()
+  if (!is.na(improveTTopEnvelope)) {
+    TT <- TRUE
+    topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
+                                y = improveTTopEnvelope$y,
+                                nCol = ncol(rolledImage))
 
+  }
+  else{
+    TT <- FALSE
   topEnv <- .top_env(rolledImage = rolledImage, max_roc = max_roc,
                      sepDist = sepDist, maxNoise = maxNoise)
+  }
+
+
+  if (!is.na(improveBTopEnvelope)) {
+    BT <- TRUE
+    topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
+                                y = improveBTopEnvelope$y,
+                                nCol = ncol(rolledImage))
+
+  }
+  else{
+    BT <- FALSE
   topLowerEnv <- .top_lower_env(rolledImage = rolledImage, max_roc = max_roc,
                                 sepDist = sepDist, maxNoise = maxNoise)
+  }
+
+
+  if (!is.na(improveTBottomEnvelope)) {
+    TB <- TRUE
+    bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
+                                y = improveTBottomEnvelope$y,
+                                nCol = ncol(rolledImage))
+  }
+  else{
+    TB <- FALSE
   bottomUpperEnv <- .bottom_upper_env(rolledImage = rolledImage, max_roc = max_roc,
                                       sepDist = sepDist, maxNoise = maxNoise)
+  }
+
+
+  if (!is.na(improveBBottomEnvelope)) {
+    BB <- TRUE
+    bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
+                                   y = improveBBottomEnvelope$y,
+                                   nCol = ncol(rolledImage))
+  }
+  else{
+    BB <- FALSE
   bottomEnv <- .bottom_env(rolledImage = rolledImage, max_roc = max_roc,
                            sepDist = sepDist, maxNoise = maxNoise)
+  }
+
   if (returnType == "MatrixScaled") {
     topEnvelope <- bottomCut - topEnv
     topLowerEnvelope <- bottomCut - topLowerEnv
@@ -1265,7 +1312,9 @@ TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInIma
 TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 HDVcheck = FALSE, plotPNG = TRUE,
                 improveTopBottomCuts = NA,
-                improveTopEnvelope = NA, improveBottomEnvelope = NA,
+                improveTTopEnvelope = NA, improveBTopEnvelope = NA,
+                improveTBottomEnvelope = NA,
+                improveBBottomEnvelope = NA,
                 improveTopEnvelopeStartEnd = NA,
                 improveBottomEnvelopeStartEnd = NA,
                 trimAmountTop = 100,
@@ -1397,12 +1446,20 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     # Creates the matrix scaled envelope
     matrixEnvelopes <- find_envelopes(imageMatrix = imageCut, rolledImage = rolledImage, bottomCut = bottomCut,
                                       returnType = "MatrixScaled", sepDist = OffsetDistanceForEnvelopes,
-                                      max_roc = maxEnvelopeROC, maxNoise = maxNoise)
+                                      max_roc = maxEnvelopeROC, maxNoise = maxNoise,
+                                      improveTTopEnvelope = improveTTopEnvelope,
+                                      improveBTopEnvelope = improveBTopEnvelope,
+                                      improveTBottomEnvelope = improveTBottomEnvelope,
+                                      improveBBottomEnvelope = improveBBottomEnvelope)
     # Creates the plotting scaled envelope for the return to the user
     plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
                                     bottomCut = bottomCut, returnType = "PlottingScaled",
                                     maxNoise = maxNoise, max_roc = maxEnvelopeROC,
-                                    sepDist = OffsetDistanceForEnvelopes)
+                                    sepDist = OffsetDistanceForEnvelopes,
+                                    improveTTopEnvelope = improveTTopEnvelope,
+                                    improveBTopEnvelope = improveBTopEnvelope,
+                                    improveTBottomEnvelope = improveTBottomEnvelope,
+                                    improveBBottomEnvelope = improveBBottomEnvelope)
     # Isolates both traces on their own plots
     traceMatrices <- isolate_traces(imageCut, topEnvelope = matrixEnvelopes$TopEnvelope,
                                     topLowerEnvelope = matrixEnvelopes$TopLowerEnvelope,
