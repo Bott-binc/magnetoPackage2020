@@ -259,6 +259,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            improveTBottomEnvelope = NA,
                            improveBBottomEnvelope = NA){
 browser()
+  # Top of Top Envelope
   if (!is.na(improveTTopEnvelope)) {
     TT <- TRUE
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
@@ -272,7 +273,7 @@ browser()
                      sepDist = sepDist, maxNoise = maxNoise)
   }
 
-
+  # Bottom of Top Envelope
   if (!is.na(improveBTopEnvelope)) {
     BT <- TRUE
     topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
@@ -286,7 +287,7 @@ browser()
                                 sepDist = sepDist, maxNoise = maxNoise)
   }
 
-
+  # Top of Bottom Envelope
   if (!is.na(improveTBottomEnvelope)) {
     TB <- TRUE
     bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
@@ -299,7 +300,7 @@ browser()
                                       sepDist = sepDist, maxNoise = maxNoise)
   }
 
-
+  # Bottom of Bottom Envelope
   if (!is.na(improveBBottomEnvelope)) {
     BB <- TRUE
     bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
@@ -1379,15 +1380,16 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     # Find the Top and Bottom Cut for the Image -----------------------------------
 
     if (!is.na(improveTopBottomCuts)){
+      browser()
       if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
-        topCut <- improveTopBottomCuts[1]
-        bottomCut <- improveTopBottomCuts[2]
+        topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100
+        bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 200
       }
       else{
         return(warning("wrong number of items in the
-                       vector for top and bottom cuts should be length 2"))
+                       vector for top and bottom cuts improvment, should be length 2"))
       }
-   }
+    }
     else{
       topBottomCuts <- tryCatch(find_cuts(imageCut, percentFromEdge = peakPercFromEdge,
                                           percentEdgeForLeft = peakPercentFromEdgeLeftSide,
@@ -1397,8 +1399,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
       if (inherits(topBottomCuts, "error")) {
         return(as.character(topBottomCuts))
       }
-      topCut <- topBottomCuts$TopCut # line between the words and the top trace
-      bottomCut <- topBottomCuts$BottomCut # line between the timing traces and the bottom trace
+      topCut <- topBottomCuts$TopCut # line between the timing traces and the bottom trace
+      bottomCut <- topBottomCuts$BottomCut # line between the words and the top trace
       if (inherits(topCut, "warning")) {
         traceWarnings <- append(traceWarnings, topCut)
         if (isFALSE(dirChangeFlag)) {
@@ -1550,7 +1552,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                           TopTraceStartEnds = list(Start = TopStartsEnds$Start, End = TopStartsEnds$End),
                           BottomTraceMatrix = bottomTrace,
                           BottomTraceStartEnds = list(Start = BottomStartsEnds$Start, End = BottomStartsEnds$End),
-                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Cuts = list(TopCut = bottomCut, BottomCut = topCut),
                           Warnings = traceWarnings)
     }
     if  (isTRUE(flag)) {
@@ -1558,7 +1560,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                          ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
 
       totalReturn <- list(ImageCutMatrix = imageCut,
-                          Cuts = list(TopCut = topCut, BottomCut = bottomCut),
+                          Cuts = list(TopCut = bottomCut, BottomCut = topCut),
                           Warnings = traceWarnings)
     }
   }
