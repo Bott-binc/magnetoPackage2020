@@ -483,6 +483,7 @@ isolate_traces <- function(imageMatrix, topEnvelope, topLowerEnvelope,
 #' @param maxNoise The length of creating points allowed before considered to be off of the trace
 #' @param pathToWorkingDir Which directory you want the image to end up in
 #' @param imageName The name of the image (usually the file name)
+
 #'
 #' @return void
 #' @export
@@ -504,14 +505,28 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
   newTopTrace <- c(startTop, topTrace, endTop)
   newBottomTrace <- c(startBottom, bottomTrace, endBottom)
 
+
+
   #Scaling the envelopes for plotting
   plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageMatrix,
                                   bottomCut = bottomCut, returnType = "PlottingScaled",
                                   maxNoise = maxNoise, max_roc = max_roc, sepDist = sepDist)
   if (isFALSE(intersectionFlag)) {
-    png(paste0(pathToWorkingDir, imageName, "-plot", ".png"))
+    datePieces <- strsplit(as.character(Sys.time()), split = "-")
+    timePieces <- strsplit(datePieces[[1]][3], ":")
+    spaceRemove <- strsplit(timePieces[[1]][1], " ")
+    time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
+                                spaceRemove[[1]][1], spaceRemove[[1]][2],
+                                timePieces[[1]][2], timePieces[[1]][3]))
+    png(paste0(pathToWorkingDir, imageName,"-",time,"-plot", ".png"))
   }else{# is an intersection so we consider it a fail process
-    png(paste0(pathToWorkingDir, imageName, "-FailToProcess", "-plot", ".png"))
+    datePieces <- strsplit(as.character(Sys.time()), split = "-")
+    timePieces <- strsplit(datePieces[[1]][3], ":")
+    spaceRemove <- strsplit(timePieces[[1]][1], " ")
+    time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
+                                 spaceRemove[[1]][1], spaceRemove[[1]][2],
+                                 timePieces[[1]][2], timePieces[[1]][3]))
+    png(paste0(pathToWorkingDir, imageName,"-",time ,"-FailToProcess", "-plot", ".png"))
   }
   suppressWarnings(rtiff::plot.matrix(imageMatrix))
   lines(plotEnvelopes$TopEnvelope, col = "green")
@@ -525,6 +540,8 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
   abline(v = topStartEnds, col = "green")
   abline(v = bottomStartEnds, col = "orange")
   dev.off() #close png file
+
+  return(time)
 }
 
 
@@ -546,13 +563,21 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
   #ifelse(!dir.exists( file.path(pathToWorkingDir, "FailedToProcess")), dir.create( file.path(pathToWorkingDir, "FailedToProcess")), FALSE)
   #newPathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
   # 2. Create a plot
-  png(paste0(pathToWorkingDir, imageName, "-FailToProcess-Plot",".png"))
+  datePieces <- strsplit(as.character(Sys.time()), split = "-")
+  timePieces <- strsplit(datePieces[[1]][3], ":")
+  spaceRemove <- strsplit(timePieces[[1]][1], " ")
+  time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
+                              spaceRemove[[1]][1], spaceRemove[[1]][2],
+                              timePieces[[1]][2], timePieces[[1]][3]))
+  png(paste0(pathToWorkingDir, imageName, "-" ,time,  "-FailToProcess-Plot",".png"))
   suppressWarnings(rtiff::plot.matrix(imageMatrix))
   abline(h = (nrow(imageMatrix) - topCut), col = "green")
   abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
   text("This Isn't Processed", x = 3000, y = 1500, col = "orange")
   # Close the png file
   dev.off()
+
+  return(time)
 }
 
 
@@ -915,11 +940,12 @@ triple_check <- function(imageMatrix, topCut, bottomCut, minDistance = 50, perce
 #' checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
 #' (anything above the threshold will be sent to warning)
 #' @param k See rollMean() in zoo package for details
+#' @param saveData allows the user to save the data to the working directory
 #'
 #' @return
 #' @export
 TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
-                HDVcheck = FALSE, plotPNG = TRUE,
+                HDVcheck = FALSE, plotPNG = TRUE, saveData = FALSE,
                 trimAmountTop = 100,
                 trimAmountBottom = 50, beta0 = -2.774327,
                 beta1 = 51.91687, cutoffProbability = 0.5,
@@ -1110,9 +1136,10 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
   }
   # Plotting (if applicable) ---------------------------------------------------
+  time <- FALSE
   if (isTRUE(plotPNG)){
     if (isFALSE(flag)) {
-      plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
+      time <- plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
                    bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
                    topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                    sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
@@ -1128,7 +1155,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                           Warnings = traceWarnings)
     }
     if  (isTRUE(flag)) {
-      plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
+      time <- plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
                          ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
 
       totalReturn <- list(ImageCutMatrix = imageCut,
@@ -1152,7 +1179,17 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                           Warnings = traceWarnings)
     }
   }
-
+  if (isTRUE(saveData)) {
+    if (time == FALSE){
+      datePieces <- strsplit(as.character(Sys.time()), split = "-")
+      timePieces <- strsplit(datePieces[[1]][3], ":")
+      spaceRemove <- strsplit(timePieces[[1]][1], " ")
+      time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
+                                  spaceRemove[[1]][1], spaceRemove[[1]][2],
+                                  timePieces[[1]][2], timePieces[[1]][3]))
+    }
+    saveRDS(totalReturn, file = paste0(pathToWorkingDir, imageName, "-",time, "Data.RDS"))
+  }
 
   return(totalReturn)
 }
@@ -1307,11 +1344,24 @@ TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInIma
 #' checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
 #' (anything above the threshold will be sent to warning)
 #' @param k See rollMean() in zoo package for details
+#' @param improvement
+#' @param saveData
+#' @param improveTopBottomCuts
+#' @param improveTTopEnvelope
+#' @param improveBTopEnvelope
+#' @param improveTBottomEnvelope
+#' @param improveBBottomEnvelope
+#' @param improveTopEnvelopeStartEnd
+#' @param improveBottomEnvelopeStartEnd
+#' @param trippleCheckIGNORE
+#' @param intersectionCheckIGNORE
 #'
 #' @return
 #' @export
 TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
+                 improvement = FALSE,
                 HDVcheck = FALSE, plotPNG = TRUE,
+                saveData = FALSE,
                 improveTopBottomCuts = NA,
                 improveTTopEnvelope = NA, improveBTopEnvelope = NA,
                 improveTBottomEnvelope = NA,
@@ -1340,7 +1390,9 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 envelopeStartEndThreshold = 300, intersetionRemoveAmount = 1000,
                 CreateTraceThreshold = 5, MARange = 6, region = 2,
                 loopNumber = 4, spikeThreshold = 50, k = 40){
-
+  if(isTRUE(improvement)){
+  pathToWorkingDir <- magneto:::.dir_Str_Improvement(imageName = imageName, pathToWorkingDir = pathToWorkingDir)
+  }
   traceWarnings <- vector()
   typeCheck <- NULL # if you aren't using the HDV check
   flag <- FALSE
@@ -1538,14 +1590,14 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
   }
   # Plotting (if applicable) ---------------------------------------------------
+  time = FALSE
   if (isTRUE(plotPNG)){
     if (isFALSE(flag)) {
-      plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
+      time <- plot_success(imageMatrix = imageCut, rolledImage = rolledImage, topCut = topCut,
                    bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
                    topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                    sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
                    intersectionFlag = intersectionFlag) # adds fail to process dir on if intersection but keeps all info
-
 
       totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
                           PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
@@ -1556,7 +1608,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                           Warnings = traceWarnings)
     }
     if  (isTRUE(flag)) {
-      plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
+      time <- plot_with_warnings(imageMatrix = imageCut, topCut = topCut, bottomCut = bottomCut
                          ,pathToWorkingDir = pathToWorkingDir, imageName = imageName)
 
       totalReturn <- list(ImageCutMatrix = imageCut,
@@ -1582,5 +1634,16 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
   }
 
 
+  if (isTRUE(saveData)) {
+    if (time == FALSE){
+      datePieces <- strsplit(as.character(Sys.time()), split = "-")
+      timePieces <- strsplit(datePieces[[1]][3], ":")
+      spaceRemove <- strsplit(timePieces[[1]][1], " ")
+      time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
+                                  spaceRemove[[1]][1], spaceRemove[[1]][2],
+                                  timePieces[[1]][2], timePieces[[1]][3]))
+    }
+    saveRDS(totalReturn, file = paste0(pathToWorkingDir, imageName,"-", time, "Data.RDS"))
+  }
   return(totalReturn)
 }

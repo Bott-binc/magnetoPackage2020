@@ -870,7 +870,7 @@
 
 
 
-#' Directory Structure Creation
+#' Directory Structure Creation of image year
 #'
 #' Creates the directory structure for the digitized images along with setting with
 #' pwd for that specific image, if that year doesn't exist, it will create one
@@ -889,6 +889,28 @@
     dir.create(paste0(pathToWorkingDir, "/", year, "/"))
     dir.create(paste0(pathToWorkingDir, "/", year, "/", "FailedToProcess/"))
     pwd <- paste0(pathToWorkingDir, "/", year, "/")
+    return(pwd)
+  }
+}
+
+#' Directory Structure Creation of image name
+#'
+#' Creates the directory structure for the digitized images along with setting with
+#' pwd for that specific image, if a dir doesn't exist for the image name, it will create one
+#'
+#' @param imageName A string of the image name
+#' @param pathToWorkingDir Where the digitized images will be put
+#'
+#' @return The pwd for that specific image
+.dir_Str_Improvement <- function(imageName, pathToWorkingDir){
+  if (dir.exists(paste0(pathToWorkingDir, "/", imageName, "/"))) {
+    pwd <- paste0(pathToWorkingDir, "/", imageName, "/")
+    return(pwd)
+  }
+  else {
+    dir.create(paste0(pathToWorkingDir, "/", imageName, "/"))
+    dir.create(paste0(pathToWorkingDir, "/", imageName, "/", "FailedToProcess/"))
+    pwd <- paste0(pathToWorkingDir, "/", imageName, "/")
     return(pwd)
   }
 }
