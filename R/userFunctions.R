@@ -258,7 +258,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            improveTTopEnvelope = NA, improveBTopEnvelope = NA,
                            improveTBottomEnvelope = NA,
                            improveBBottomEnvelope = NA){
-browser()
+
   # Top of Top Envelope
   if (!is.na(improveTTopEnvelope)) {
     TT <- TRUE
@@ -376,7 +376,7 @@ create_trace <- function(traceMatrix, start, end, topEnv, bottomEnv, thresh = 5,
   for (j in 1:loopNumber) {
     jumpsUp <- which(abs(diff(traceLine)) >= thresh) # to catch the spikes
     if (length(jumpsUp) > 0 ) {
-      #browser()
+
       jumpsUp <- jumpsUp + 1 # correction so we land on the jumps not the one before the jump
       for (i in jumpsUp) {
         if (i < MARange + region + 1) {
@@ -663,7 +663,7 @@ env_start_end <- function(traceMatrix, thresh = 300, gapLengthCutoff = 20, retur
   #Starting at the left side
   for (i in 1:ncol(traceMatrix)) {
     if (sum(traceMatrix[,i]) != 0 & isFALSE(startFound) & isFALSE(indicatorStart)) {
-      #browser()
+
       startFound <- TRUE
       possibleStarts <- i
       counter <- i
@@ -1346,7 +1346,8 @@ TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInIma
 #' @param k See rollMean() in zoo package for details
 #' @param improvement
 #' @param saveData
-#' @param improveTopBottomCuts
+#' @param improveTopBottomCuts Vector of length two consisting of the two points as heights that will
+#' become the new top and bottom cuts respectivly
 #' @param improveTTopEnvelope
 #' @param improveBTopEnvelope
 #' @param improveTBottomEnvelope
@@ -1431,8 +1432,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
     # Find the Top and Bottom Cut for the Image -----------------------------------
 
-    if (!is.na(improveTopBottomCuts)){
-      browser()
+    if (!is.na(improveTopBottomCuts[1])){
       if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
         topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100
         bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 200
