@@ -10,6 +10,7 @@ TIS(
   pathToWorkingDir = "~/",
   HDVcheck = FALSE,
   plotPNG = TRUE,
+  saveData = FALSE,
   trimAmountTop = 100,
   trimAmountBottom = 50,
   beta0 = -2.774327,
@@ -55,6 +56,8 @@ TIS(
 \item{HDVcheck}{For Magneto project only, use FALSE otherwise}
 
 \item{plotPNG}{TRUE or FALSE if you want plots saved or just data returned}
+
+\item{saveData}{allows the user to save the data to the working directory}
 
 \item{trimAmountTop}{Number of pixels removed from top of image (usually for common flares)}
 

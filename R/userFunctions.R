@@ -250,6 +250,14 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #' @param bottomCut a point that is the height of a horizontal line between the timing marks
 #' and the bottom trace
 #' @param rolledImage the image rolled by mean_roll_image()
+#' @param improveTTopEnvelope data.frame of col x and col y representing points for top of the top envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveBTopEnvelope data.frame of col x and col y representing points for Bottom of the top envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveTBottomEnvelope data.frame of col x and col y representing points for top of the bottom envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveBBottomEnvelope data.frame of col x and col y representing points for bottom of the bottom envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
 #'
 #' @return list of all four envelopes
 #' @export
@@ -1342,18 +1350,21 @@ TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInIma
 #' checks for abnormal spikes in the tracing algorithm, could be due to a jump from one trace to another
 #' (anything above the threshold will be sent to warning)
 #' @param k See rollMean() in zoo package for details
-#' @param improvement
-#' @param saveData
+#' @param improvement TRUE or FALSE depending on if you are adding any of the improvement features,
+#' causes TISI to ignore some check
+#' @param saveData TRUE or FALSE if wanting a .RDS file saved to dir along with the image if plotPNG is TRUE
 #' @param improveTopBottomCuts Vector of length two consisting of the two points as heights that will
-#' become the new top and bottom cuts respectivly
-#' @param improveTTopEnvelope
-#' @param improveBTopEnvelope
-#' @param improveTBottomEnvelope
-#' @param improveBBottomEnvelope
-#' @param improveTopEnvelopeStartEnd
-#' @param improveBottomEnvelopeStartEnd
-#' @param trippleCheckIGNORE
-#' @param intersectionCheckIGNORE
+#' become the new top and bottom cuts respectively
+#' @param improveTTopEnvelope data.frame of col x and col y representing points for top of the top envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveBTopEnvelope data.frame of col x and col y representing points for Bottom of the top envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveTBottomEnvelope data.frame of col x and col y representing points for top of the bottom envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveBBottomEnvelope data.frame of col x and col y representing points for bottom of the bottom envelope pair
+#' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param improveTopEnvelopeStartEnd Vector of length 2, start and end point respectively
+#' @param improveBottomEnvelopeStartEnd Vector of length 2, start and end point respectively
 #'
 #' @return
 #' @export

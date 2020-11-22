@@ -12,10 +12,10 @@ find_envelopes(
   sepDist = 10,
   max_roc = 25,
   maxNoise = 100,
-  improveTTopEnvelope = NA,
-  improveBTopEnvelope = NA,
-  improveTBottomEnvelope = NA,
-  improveBBottomEnvelope = NA
+  improveTTopEnvelope = data.frame(x = NA, y = NA),
+  improveBTopEnvelope = data.frame(x = NA, y = NA),
+  improveTBottomEnvelope = data.frame(x = NA, y = NA),
+  improveBBottomEnvelope = data.frame(x = NA, y = NA)
 )
 }
 \arguments{
@@ -35,6 +35,18 @@ and the bottom trace}
 \item{max_roc}{maximum rate of change allowed between two pixels on the line before deemed as noise}
 
 \item{maxNoise}{the length of creating points allowed before considered to be off of the trace}
+
+\item{improveTTopEnvelope}{data.frame of col x and col y representing points for top of the top envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveBTopEnvelope}{data.frame of col x and col y representing points for Bottom of the top envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveTBottomEnvelope}{data.frame of col x and col y representing points for top of the bottom envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveBBottomEnvelope}{data.frame of col x and col y representing points for bottom of the bottom envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
 }
 \value{
 list of all four envelopes

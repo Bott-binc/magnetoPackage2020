@@ -8,8 +8,10 @@ TISI(
   imageName,
   fileLoc,
   pathToWorkingDir = "~/",
+  improvement = FALSE,
   HDVcheck = FALSE,
   plotPNG = TRUE,
+  saveData = FALSE,
   improveTopBottomCuts = NA,
   improveTTopEnvelope = NA,
   improveBTopEnvelope = NA,
@@ -21,8 +23,6 @@ TISI(
   trimAmountBottom = 50,
   trimAmountLeft = 2,
   trimAmountRight = 2,
-  trippleCheckIGNORE = FALSE,
-  intersectionCheckIGNORE = FALSE,
   beta0 = -2.774327,
   beta1 = 51.91687,
   cutoffProbability = 0.5,
@@ -61,9 +61,33 @@ TISI(
 
 \item{pathToWorkingDir}{Path of where the plots should be saved to}
 
+\item{improvement}{TRUE or FALSE depending on if you are adding any of the improvement features,
+causes TISI to ignore some check}
+
 \item{HDVcheck}{For Magneto project only, use FALSE otherwise}
 
 \item{plotPNG}{TRUE or FALSE if you want plots saved or just data returned}
+
+\item{saveData}{TRUE or FALSE if wanting a .RDS file saved to dir along with the image if plotPNG is TRUE}
+
+\item{improveTopBottomCuts}{Vector of length two consisting of the two points as heights that will
+become the new top and bottom cuts respectively}
+
+\item{improveTTopEnvelope}{data.frame of col x and col y representing points for top of the top envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveBTopEnvelope}{data.frame of col x and col y representing points for Bottom of the top envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveTBottomEnvelope}{data.frame of col x and col y representing points for top of the bottom envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveBBottomEnvelope}{data.frame of col x and col y representing points for bottom of the bottom envelope pair
+doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{improveTopEnvelopeStartEnd}{Vector of length 2, start and end point respectively}
+
+\item{improveBottomEnvelopeStartEnd}{Vector of length 2, start and end point respectively}
 
 \item{trimAmountTop}{Number of pixels removed from top of image (usually for common flares)}
 
