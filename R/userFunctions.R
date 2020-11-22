@@ -260,11 +260,13 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            improveBBottomEnvelope = NA){
 
   # Top of Top Envelope
+  browser()
   if (!is.na(improveTTopEnvelope)) {
     TT <- TRUE
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
                                 y = improveTTopEnvelope$y,
-                                nCol = ncol(rolledImage))
+                                nCol = ncol(rolledImage))$y
+   #topEnv <- nrow(imageMatrix) - topEnv + 100
 
   }
   else{
@@ -272,13 +274,14 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
   topEnv <- .top_env(rolledImage = rolledImage, max_roc = max_roc,
                      sepDist = sepDist, maxNoise = maxNoise)
   }
-
+  browser()
   # Bottom of Top Envelope
   if (!is.na(improveBTopEnvelope)) {
     BT <- TRUE
     topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
                                 y = improveBTopEnvelope$y,
-                                nCol = ncol(rolledImage))
+                                nCol = ncol(rolledImage))$y
+    #topLowerEnv <- nrow(imageMatrix) - topLowerEnv + 100
 
   }
   else{
@@ -286,26 +289,28 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
   topLowerEnv <- .top_lower_env(rolledImage = rolledImage, max_roc = max_roc,
                                 sepDist = sepDist, maxNoise = maxNoise)
   }
-
+  browser()
   # Top of Bottom Envelope
   if (!is.na(improveTBottomEnvelope)) {
     TB <- TRUE
     bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
                                 y = improveTBottomEnvelope$y,
-                                nCol = ncol(rolledImage))
+                                nCol = ncol(rolledImage))$y
+   #bottomUpperEnv <- nrow(imageMatrix) - bottomUpperEnv + 100
   }
   else{
     TB <- FALSE
   bottomUpperEnv <- .bottom_upper_env(rolledImage = rolledImage, max_roc = max_roc,
                                       sepDist = sepDist, maxNoise = maxNoise)
   }
-
+  browser()
   # Bottom of Bottom Envelope
   if (!is.na(improveBBottomEnvelope)) {
     BB <- TRUE
     bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
                                    y = improveBBottomEnvelope$y,
-                                   nCol = ncol(rolledImage))
+                                   nCol = ncol(rolledImage))$y
+    #bottomEnv <- nrow(imageMatrix) - bottomEnv + 100
   }
   else{
     BB <- FALSE
@@ -1373,8 +1378,6 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 trimAmountBottom = 50,
                 trimAmountLeft = 2,
                 trimAmountRight = 2,
-                trippleCheckIGNORE = FALSE,
-                intersectionCheckIGNORE = FALSE,
                 beta0 = -2.774327,
                 beta1 = 51.91687, cutoffProbability = 0.5,
                 NADefault = 0, FilterBright = c(13, 13),
@@ -1431,11 +1434,11 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
 
     # Find the Top and Bottom Cut for the Image -----------------------------------
-
+    browser()
     if (!is.na(improveTopBottomCuts[1])){
       if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
         topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100
-        bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 200
+        bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 200 # this this might be 100 check
       }
       else{
         return(warning("wrong number of items in the
@@ -1453,7 +1456,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
       }
       topCut <- topBottomCuts$TopCut # line between the timing traces and the bottom trace
       bottomCut <- topBottomCuts$BottomCut # line between the words and the top trace
-      if (inherits(topCut, "warning")) {
+      if (isFALSE(improvement) & inherits(topCut, "warning")) {
         traceWarnings <- append(traceWarnings, topCut)
         if (isFALSE(dirChangeFlag)) {
           pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
@@ -1462,7 +1465,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
         flag = TRUE #wont process, but will put a plot out into the pwd
         topCut <- 0
       }
-      if (inherits(bottomCut, "warning")) {
+      if (isFALSE(improvement) & inherits(bottomCut, "warning")) {
         traceWarnings <- append(traceWarnings, bottomCut)
         if (isFALSE(dirChangeFlag)) {
           pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
@@ -1475,7 +1478,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
   }
   if (isFALSE(flag)) {
     # Check for a Triple Set of Traces -------------------------------------------
-    if(isFALSE(trippleCheckIGNORE)){
+    if(isFALSE(improvement)){
       tripleBool <- tryCatch(triple_check(imageMatrix = imageCut, topCut = topCut,
                                           bottomCut = bottomCut, minDistance = tripleCheckMinDistance,
                                           percentFromEdge = peakPercFromEdge, thresholdHeight = tripleThresholdHeight,
@@ -1495,6 +1498,12 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
     # Creating Envelopes ---------------------------------------------------------
     # Gets rid of small gaps
+    if (isTRUE(improvement) & inherits(topCut, "warning")){
+      topCut <- 0
+    }
+    if (isTRUE(improvement) & inherits(bottomCut, "warning")){
+      bottomCut <- ncol(imageCut)
+    }
     rolledImage <- mean_roll_image(imageMatrix = imageCut, topcut = topCut,
                                    bottomcut =  bottomCut, fill = "extend", k = k) #to get a more consistent image
     # Creates the matrix scaled envelope
@@ -1526,7 +1535,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                       returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
 
     # Checking Envelopes for Intersections ---------------------------------------
-    if (isFALSE(intersectionCheckIGNORE)){
+    if (isFALSE(improvement)){
       intersection <- tryCatch(intersection_check(topEnv = matrixEnvelopes$TopLowerEnvelope,
                                                   bottomEnv = matrixEnvelopes$BottomUpperEnv,
                                                   imageName, rmAmount = intersetionRemoveAmount),
@@ -1560,27 +1569,29 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                 loopNumber = loopNumber)
 
     # Checking for spikes in the traces ------------------------------------------
-    topTraceSpikeCheck <- tryCatch(spike_check(topTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
-    bottomTraceSpikeCheck <- tryCatch(spike_check(bottomTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
-    if (inherits(topTraceSpikeCheck, "warning") || inherits(bottomTraceSpikeCheck, "warning")) {
-      if (!is.null(topTraceSpikeCheck)) {
-        traceWarnings <- append(traceWarnings, topTraceSpikeCheck)
-        if (isFALSE(intersectionFlag)){ # so we still get the full plot but it goes to the correct place
-          if (isFALSE(dirChangeFlag)) {
-            pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
-            dirChangeFlag <- TRUE
+    if (isFALSE(improvement)){
+      topTraceSpikeCheck <- tryCatch(spike_check(topTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
+      bottomTraceSpikeCheck <- tryCatch(spike_check(bottomTrace, spikeThreshold = spikeThreshold), warning = function(w) w)
+      if (inherits(topTraceSpikeCheck, "warning") || inherits(bottomTraceSpikeCheck, "warning")) {
+        if (!is.null(topTraceSpikeCheck)) {
+          traceWarnings <- append(traceWarnings, topTraceSpikeCheck)
+          if (isFALSE(intersectionFlag)){ # so we still get the full plot but it goes to the correct place
+            if (isFALSE(dirChangeFlag)) {
+              pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+              dirChangeFlag <- TRUE
+            }
+            intersectionFlag <- TRUE
           }
-          intersectionFlag <- TRUE
         }
-      }
-      if (!is.null(bottomTraceSpikeCheck)) { # Sp we still get the full plot but it goes to the correct place
-        traceWarnings <- append(traceWarnings, bottomTraceSpikeCheck)
-        if (isFALSE(intersectionFlag)){
-          if (isFALSE(dirChangeFlag)) {
-            pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
-            dirChangeFlag <- TRUE
+        if (!is.null(bottomTraceSpikeCheck)) { # Sp we still get the full plot but it goes to the correct place
+          traceWarnings <- append(traceWarnings, bottomTraceSpikeCheck)
+          if (isFALSE(intersectionFlag)){
+            if (isFALSE(dirChangeFlag)) {
+              pathToWorkingDir <- paste0(pathToWorkingDir, "FailedToProcess/")
+              dirChangeFlag <- TRUE
+            }
+            intersectionFlag <- TRUE
           }
-          intersectionFlag <- TRUE
         }
       }
     }

@@ -842,6 +842,7 @@
 #'
 #' @return matrix of the one trace on black(NOTE: still in origional spot on plot)
 .isolating_trace <- function(imageMatrix, topEnv, bottomEnv){
+  browser()
   if (ncol(imageMatrix) != length(topEnv) | ncol(imageMatrix) != length(bottomEnv)) {
     stop("ImageMatrix length differs from top or bottom env")
   }
@@ -849,6 +850,7 @@
   for (j in 1:ncol(imageMatrix)) {
     imageMatrix[c(0:(topEnv[j])),j] <- 0
     imageMatrix[c((bottomEnv[j]):n),j] <- 0
+    print(j)
   }
   return(imageMatrix)
 }
@@ -928,11 +930,17 @@
     x <- c(0,x) # creates first point
     y <- c(y[1],y) # matches height of user selected first point
   }
+  else {
+    y[1] <- y[2]
+  }
   diffx <- diff(x)
   diffy <- diff(y)
   slopes <- diffy / diffx # slope of the y = mx+b line between each points
 
   xNumFills <- diff(x) - 1 # how many places we have to fill
+  if(length(which(xNumFills < 0)) >= 1){
+    warning("there is one or more numbers that are not in the correct accending order ...")
+  }
 
   # Extending the points to make continuous ------------------------------------
   newX <- vector()
@@ -981,7 +989,7 @@
   # Start of adding the heights from the slope ---------------------------------
   k <- 0
   indicator = FALSE
-  for (i in 1:(length(outY) - sum(xNumFills))) {
+  for (i in 1:(length(outY) - sum(xNumFills) + xNumFills[length(xNumFills)])) {
     if (i == length(xNumFills)) {
       k <- k + 1
       intersept <- outY[k] - (outX[k]*slopes[length(xNumFills)])
@@ -1014,6 +1022,9 @@
       }
     }
   }
+  #compensates for the x = 0 being the first element
+  outX <- outX[-length(outX)]
+  outY <- outY[-length(outY)]
 
 
   return(data.frame(x = outX, y = outY))
