@@ -842,7 +842,6 @@
 #'
 #' @return matrix of the one trace on black(NOTE: still in origional spot on plot)
 .isolating_trace <- function(imageMatrix, topEnv, bottomEnv){
-  browser()
   if (ncol(imageMatrix) != length(topEnv) | ncol(imageMatrix) != length(bottomEnv)) {
     stop("ImageMatrix length differs from top or bottom env")
   }
@@ -850,7 +849,6 @@
   for (j in 1:ncol(imageMatrix)) {
     imageMatrix[c(0:(topEnv[j])),j] <- 0
     imageMatrix[c((bottomEnv[j]):n),j] <- 0
-    print(j)
   }
   return(imageMatrix)
 }

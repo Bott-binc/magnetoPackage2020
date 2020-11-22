@@ -255,65 +255,58 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #' @export
 find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            sepDist = 10, max_roc = 25, maxNoise = 100,
-                           improveTTopEnvelope = NA, improveBTopEnvelope = NA,
-                           improveTBottomEnvelope = NA,
-                           improveBBottomEnvelope = NA){
+                           improveTTopEnvelope = data.frame(x = NA, y = NA),
+                           improveBTopEnvelope = data.frame(x = NA, y = NA),
+                           improveTBottomEnvelope = data.frame(x = NA, y = NA),
+                           improveBBottomEnvelope = data.frame(x = NA, y = NA)){
 
   # Top of Top Envelope
-  browser()
-  if (!is.na(improveTTopEnvelope)) {
-    TT <- TRUE
+
+  if (!is.na(improveTTopEnvelope$y[1])) {
+    improveTTopEnvelope$y <- improveTTopEnvelope$y + 100 # compensation factor that was found
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
                                 y = improveTTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
-   #topEnv <- nrow(imageMatrix) - topEnv + 100
 
   }
   else{
-    TT <- FALSE
   topEnv <- .top_env(rolledImage = rolledImage, max_roc = max_roc,
                      sepDist = sepDist, maxNoise = maxNoise)
   }
-  browser()
+
   # Bottom of Top Envelope
-  if (!is.na(improveBTopEnvelope)) {
-    BT <- TRUE
+  if (!is.na(improveBTopEnvelope$y[1])) {
+    improveBTopEnvelope$y <- improveBTopEnvelope$y + 100 # compensation factor that was found
     topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
                                 y = improveBTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
-    #topLowerEnv <- nrow(imageMatrix) - topLowerEnv + 100
 
   }
   else{
-    BT <- FALSE
   topLowerEnv <- .top_lower_env(rolledImage = rolledImage, max_roc = max_roc,
                                 sepDist = sepDist, maxNoise = maxNoise)
   }
-  browser()
+
   # Top of Bottom Envelope
-  if (!is.na(improveTBottomEnvelope)) {
-    TB <- TRUE
+  if (!is.na(improveTBottomEnvelope$y[1])) {
+    improveTBottomEnvelope$y <- improveTBottomEnvelope$y + 100 # compensation factor that was found
     bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
                                 y = improveTBottomEnvelope$y,
                                 nCol = ncol(rolledImage))$y
-   #bottomUpperEnv <- nrow(imageMatrix) - bottomUpperEnv + 100
   }
   else{
-    TB <- FALSE
   bottomUpperEnv <- .bottom_upper_env(rolledImage = rolledImage, max_roc = max_roc,
                                       sepDist = sepDist, maxNoise = maxNoise)
   }
-  browser()
+
   # Bottom of Bottom Envelope
-  if (!is.na(improveBBottomEnvelope)) {
-    BB <- TRUE
+  if (!is.na(improveBBottomEnvelope$y[1])) {
+    improveBBottomEnvelope$y <- improveBBottomEnvelope$y + 100 # compensation factor that was found
     bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
                                    y = improveBBottomEnvelope$y,
                                    nCol = ncol(rolledImage))$y
-    #bottomEnv <- nrow(imageMatrix) - bottomEnv + 100
   }
   else{
-    BB <- FALSE
   bottomEnv <- .bottom_env(rolledImage = rolledImage, max_roc = max_roc,
                            sepDist = sepDist, maxNoise = maxNoise)
   }
@@ -1434,7 +1427,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
 
     # Find the Top and Bottom Cut for the Image -----------------------------------
-    browser()
+
     if (!is.na(improveTopBottomCuts[1])){
       if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
         topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100
@@ -1529,10 +1522,30 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                     bottomUpperEnvelope = matrixEnvelopes$BottomUpperEnvelope,
                                     bottomEnvelope = matrixEnvelopes$BottomEnvelope)
 
+
+    # Creating the start and ends for the two traces ------------------------------
+    if (!is.na(improveTopEnvelopeStartEnd[1]) &  length(improveTopEnvelopeStartEnd) == 2){
+      TopStartsEnds <- data.frame(Start = improveTopEnvelopeStartEnd[1],
+                                  End = improveTopEnvelopeStartEnd[2])
+    }
+    else if (!is.na(improveTopEnvelopeStartEnd[1]) & length(improveTopEnvelopeStartEnd != 2)){
+      warning("improveTopEnvelopeStartEnd should be a vector of two points")
+      }
+    else {
     TopStartsEnds <- env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
                                    returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
-    BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
-                                      returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+    }
+    if (!is.na(improveBottomEnvelopeStartEnd[1]) &  length(improveBottomEnvelopeStartEnd) == 2){
+      BottomStartsEnds <- data.frame(Start = improveBottomEnvelopeStartEnd[1],
+                                  End = improveBottomEnvelopeStartEnd[2])
+    }
+    else if (!is.na(improveBottomEnvelopeStartEnd[1]) & length(improveBottomEnvelopeStartEnd != 2)){
+      warning("improveBottomEnvelopeStartEnd should be a vector of two points")
+    }
+    else {
+      BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
+                                        returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+    }
 
     # Checking Envelopes for Intersections ---------------------------------------
     if (isFALSE(improvement)){
