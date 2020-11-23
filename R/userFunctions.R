@@ -266,12 +266,13 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            improveTTopEnvelope = data.frame(x = NA, y = NA),
                            improveBTopEnvelope = data.frame(x = NA, y = NA),
                            improveTBottomEnvelope = data.frame(x = NA, y = NA),
-                           improveBBottomEnvelope = data.frame(x = NA, y = NA)){
+                           improveBBottomEnvelope = data.frame(x = NA, y = NA),
+                           trimTop = 0, trimBottom = 0){
 
   # Top of Top Envelope
 
   if (!is.na(improveTTopEnvelope$y[1])) {
-    improveTTopEnvelope$y <- improveTTopEnvelope$y + 100 # compensation factor that was found
+    improveTTopEnvelope$y <- improveTTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50# compensation factor that was found
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
                                 y = improveTTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -284,7 +285,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Bottom of Top Envelope
   if (!is.na(improveBTopEnvelope$y[1])) {
-    improveBTopEnvelope$y <- improveBTopEnvelope$y + 100 # compensation factor that was found
+    improveBTopEnvelope$y <- improveBTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) -50# compensation factor that was found
     topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
                                 y = improveBTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -297,7 +298,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Top of Bottom Envelope
   if (!is.na(improveTBottomEnvelope$y[1])) {
-    improveTBottomEnvelope$y <- improveTBottomEnvelope$y + 100 # compensation factor that was found
+    improveTBottomEnvelope$y <- improveTBottomEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50# compensation factor that was found
     bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
                                 y = improveTBottomEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -309,7 +310,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Bottom of Bottom Envelope
   if (!is.na(improveBBottomEnvelope$y[1])) {
-    improveBBottomEnvelope$y <- improveBBottomEnvelope$y + 100 # compensation factor that was found
+    improveBBottomEnvelope$y <- improveBBottomEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50 # compensation factor that was found
     bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
                                    y = improveBBottomEnvelope$y,
                                    nCol = ncol(rolledImage))$y
@@ -494,7 +495,7 @@ isolate_traces <- function(imageMatrix, topEnvelope, topLowerEnvelope,
 #' @return void
 #' @export
 plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEnds,
-                        bottomStartEnds, topTrace, bottomTrace, maxNoise = 250,
+                        bottomStartEnds, topTrace, bottomTrace,  plotEnv, maxNoise = 250,
                         max_roc = 35, sepDist = 10, pathToWorkingDir = "~/", imageName,
                         intersectionFlag = FALSE){
   #Adjusting the length of the top and bottom trace to be the same as the imageMatrix
@@ -513,10 +514,11 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
 
 
 
-  #Scaling the envelopes for plotting
-  plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageMatrix,
-                                  bottomCut = bottomCut, returnType = "PlottingScaled",
-                                  maxNoise = maxNoise, max_roc = max_roc, sepDist = sepDist)
+  #Scaling the envelopes for plotting Not sure why I put this in here...
+  # plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageMatrix,
+  #                                 bottomCut = bottomCut, returnType = "PlottingScaled",
+  #                                 maxNoise = maxNoise, max_roc = max_roc, sepDist = sepDist)
+  plotEnvelopes <- plotEnv
   if (isFALSE(intersectionFlag)) {
     datePieces <- strsplit(as.character(Sys.time()), split = "-")
     timePieces <- strsplit(datePieces[[1]][3], ":")
@@ -1149,7 +1151,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                    bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
                    topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                    sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
-                   intersectionFlag = intersectionFlag) # adds fail to process dir on if intersection but keeps all info
+                   intersectionFlag = intersectionFlag, plotEnv = plotEnvelopes) # adds fail to process dir on if intersection but keeps all info
 
 
       totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
@@ -1517,7 +1519,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                       improveTTopEnvelope = improveTTopEnvelope,
                                       improveBTopEnvelope = improveBTopEnvelope,
                                       improveTBottomEnvelope = improveTBottomEnvelope,
-                                      improveBBottomEnvelope = improveBBottomEnvelope)
+                                      improveBBottomEnvelope = improveBBottomEnvelope,
+                                      trimTop = trimAmountTop, trimBottom = trimAmountBottom)
     # Creates the plotting scaled envelope for the return to the user
     plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
                                     bottomCut = bottomCut, returnType = "PlottingScaled",
@@ -1526,7 +1529,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                     improveTTopEnvelope = improveTTopEnvelope,
                                     improveBTopEnvelope = improveBTopEnvelope,
                                     improveTBottomEnvelope = improveTBottomEnvelope,
-                                    improveBBottomEnvelope = improveBBottomEnvelope)
+                                    improveBBottomEnvelope = improveBBottomEnvelope,
+                                    trimTop = trimAmountTop, trimBottom = trimAmountBottom)
     # Isolates both traces on their own plots
     traceMatrices <- isolate_traces(imageCut, topEnvelope = matrixEnvelopes$TopEnvelope,
                                     topLowerEnvelope = matrixEnvelopes$TopLowerEnvelope,
@@ -1632,7 +1636,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                    bottomCut = bottomCut, topStartEnds = TopStartsEnds, bottomStartEnds = BottomStartsEnds,
                    topTrace = topTrace, bottomTrace = bottomTrace, maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                    sepDist = OffsetDistanceForEnvelopes, pathToWorkingDir = pathToWorkingDir, imageName = imageName,
-                   intersectionFlag = intersectionFlag) # adds fail to process dir on if intersection but keeps all info
+                   intersectionFlag = intersectionFlag, plotEnv = plotEnvelopes) # adds fail to process dir on if intersection but keeps all info
 
       totalReturn <- list(ImageCutMatrix = imageCut, RolledImage = rolledImage,
                           PlotScaledEnvelopes = plotEnvelopes, TopTraceMatrix = topTrace,
@@ -1682,3 +1686,4 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
   }
   return(totalReturn)
 }
+

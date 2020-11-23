@@ -924,6 +924,12 @@
 #'
 #' @return data.frame of x and y values
 .envelopegapfiller <- function(x, y, nCol = NULL) {
+  sorting <- stats::sortedXyData(x,y) # sorts by x just in case user clicks the wrong way
+  x <- sorting$x
+  y <- sorting$y
+  duplicates <- duplicated(x)
+  x <- x[!duplicates]
+  y <- y[!duplicates]
   if (x[1] != 0) { # ensure that we are at the correct starting height
     x <- c(0,x) # creates first point
     y <- c(y[1],y) # matches height of user selected first point
@@ -931,6 +937,7 @@
   else {
     y[1] <- y[2]
   }
+
   diffx <- diff(x)
   diffy <- diff(y)
   slopes <- diffy / diffx # slope of the y = mx+b line between each points
@@ -970,8 +977,8 @@
 
   if (!is.null(nCol)) {
     if (newX[length(newX)] > nCol) {
-      outX <- newX[1:nCol] # just removes any data outside of the end length
-      outY <- newY[1:nCol]
+      outX <- newX[1:(nCol + 1)] # just removes any data outside of the end length
+      outY <- newY[1:(nCol + 1)]
     }
     else {
       xAdditions <- seq(from = (newX[length(newX)] + 1), to = nCol)
