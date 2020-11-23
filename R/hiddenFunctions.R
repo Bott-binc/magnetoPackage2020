@@ -847,8 +847,8 @@
   }
   n <- nrow(imageMatrix)
   for (j in 1:ncol(imageMatrix)) {
-    imageMatrix[c(0:(topEnv[j])),j] <- 0
-    imageMatrix[c((bottomEnv[j]):n),j] <- 0
+    imageMatrix[c(0:(round(topEnv[j], digits = 0))),j] <- 0
+    imageMatrix[c((round(bottomEnv[j], digits = 0)):n),j] <- 0
   }
   return(imageMatrix)
 }

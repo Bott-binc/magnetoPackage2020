@@ -272,7 +272,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
   # Top of Top Envelope
 
   if (!is.na(improveTTopEnvelope$y[1])) {
-    improveTTopEnvelope$y <- improveTTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50# compensation factor that was found
+    improveTTopEnvelope$y <- improveTTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50 # compensation factor that was found
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
                                 y = improveTTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
