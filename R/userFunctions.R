@@ -261,7 +261,7 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #'
 #' @return list of all four envelopes
 #' @export
-find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
+find_envelopes <- function(imageMatrix, rolledImage, bottomCut, topCut,  returnType,
                            sepDist = 10, max_roc = 25, maxNoise = 100,
                            improveTTopEnvelope = data.frame(x = NA, y = NA),
                            improveBTopEnvelope = data.frame(x = NA, y = NA),
@@ -270,9 +270,9 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
                            trimTop = 0, trimBottom = 0){
 
   # Top of Top Envelope
-
+  compensationFactor <- -1 *(nrow(imageMatrix) - bottomCut) - (trimBottom*2)
   if (!is.na(improveTTopEnvelope$y[1])) {
-    improveTTopEnvelope$y <- improveTTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50# compensation factor that was found
+    improveTTopEnvelope$y <- improveTTopEnvelope$y + compensationFactor#- nrow(imageMatrix) + bottomCut - topCut - 50 # - (trimTop *2) - (trimBottom * 2)  -  compensation factor that was found
     topEnv <- .envelopegapfiller(x = improveTTopEnvelope$x,
                                 y = improveTTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -285,7 +285,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Bottom of Top Envelope
   if (!is.na(improveBTopEnvelope$y[1])) {
-    improveBTopEnvelope$y <- improveBTopEnvelope$y  - (trimTop *2) - (trimBottom * 2) -50# compensation factor that was found
+    improveBTopEnvelope$y <- improveBTopEnvelope$y + compensationFactor#- nrow(imageMatrix) + bottomCut - topCut - 50 #- (trimTop *2) - (trimBottom * 2) compensation factor that was found
     topLowerEnv <- .envelopegapfiller(x = improveBTopEnvelope$x,
                                 y = improveBTopEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -298,7 +298,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Top of Bottom Envelope
   if (!is.na(improveTBottomEnvelope$y[1])) {
-    improveTBottomEnvelope$y <- improveTBottomEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50# compensation factor that was found
+    improveTBottomEnvelope$y <-  improveTBottomEnvelope$y + compensationFactor#- nrow(imageMatrix) + bottomCut - topCut - 50 # - (trimTop *2) - (trimBottom * 2) compensation factor that was found
     bottomUpperEnv <- .envelopegapfiller(x = improveTBottomEnvelope$x,
                                 y = improveTBottomEnvelope$y,
                                 nCol = ncol(rolledImage))$y
@@ -310,7 +310,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, returnType,
 
   # Bottom of Bottom Envelope
   if (!is.na(improveBBottomEnvelope$y[1])) {
-    improveBBottomEnvelope$y <- improveBBottomEnvelope$y  - (trimTop *2) - (trimBottom * 2) - 50 # compensation factor that was found
+    improveBBottomEnvelope$y <- improveBBottomEnvelope$y + compensationFactor#- nrow(imageMatrix) + bottomCut - topCut - 50 #compensation factor that was found
     bottomEnv <- .envelopegapfiller(x = improveBBottomEnvelope$x,
                                    y = improveBBottomEnvelope$y,
                                    nCol = ncol(rolledImage))$y
@@ -1062,10 +1062,12 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                      bottomcut =  bottomCut, fill = "extend", k = k) #to get a more consistent image
       # Creates the matrix scaled envelope
       matrixEnvelopes <- find_envelopes(imageMatrix = imageCut, rolledImage = rolledImage, bottomCut = bottomCut,
+                                        topCut = topCut,
                                         returnType = "MatrixScaled", sepDist = OffsetDistanceForEnvelopes,
                                         max_roc = maxEnvelopeROC, maxNoise = maxNoise)
       # Creates the plotting scaled envelope for the return to the user
       plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
+                                      topCut = topCut,
                                       bottomCut = bottomCut, returnType = "PlottingScaled",
                                       maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                                       sepDist = OffsetDistanceForEnvelopes)
@@ -1410,7 +1412,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
   rolledImage <- NULL
   dirChangeFlag <- FALSE
   if (isTRUE(HDVcheck)) {
-    # HDV Checking for Magnetograms ----------------------------------------------
+    # HDV Checking for Magnetograms  ----------------------------------------------
     typeCheck <- tryCatch(.hdv_check(imageName), warning = function(w) w)
   }
   if (inherits(typeCheck, "warning")) {
@@ -1514,6 +1516,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                    bottomcut =  bottomCut, fill = "extend", k = k) #to get a more consistent image
     # Creates the matrix scaled envelope
     matrixEnvelopes <- find_envelopes(imageMatrix = imageCut, rolledImage = rolledImage, bottomCut = bottomCut,
+                                      topCut = topCut,
                                       returnType = "MatrixScaled", sepDist = OffsetDistanceForEnvelopes,
                                       max_roc = maxEnvelopeROC, maxNoise = maxNoise,
                                       improveTTopEnvelope = improveTTopEnvelope,
@@ -1524,6 +1527,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     # Creates the plotting scaled envelope for the return to the user
     plotEnvelopes <- find_envelopes(rolledImage = rolledImage, imageMatrix = imageCut,
                                     bottomCut = bottomCut, returnType = "PlottingScaled",
+                                    topCut = topCut,
                                     maxNoise = maxNoise, max_roc = maxEnvelopeROC,
                                     sepDist = OffsetDistanceForEnvelopes,
                                     improveTTopEnvelope = improveTTopEnvelope,
