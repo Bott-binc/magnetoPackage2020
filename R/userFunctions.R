@@ -1445,8 +1445,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 
     if (!is.na(improveTopBottomCuts[1])){
       if(is.vector(improveTopBottomCuts) & length(improveTopBottomCuts) == 2){
-        topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100
-        bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 200 # this this might be 100 check
+        topCut <-  nrow(imageCut) - improveTopBottomCuts[1] + 100 - 35
+        bottomCut <-   nrow(imageCut) - improveTopBottomCuts[2] + 100 - 35 # this this might be 100 check
       }
       else{
         return(warning("wrong number of items in the
@@ -1688,6 +1688,6 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     }
     saveRDS(totalReturn, file = paste0(pathToWorkingDir, imageName,"-", time, "Data.RDS"))
   }
-  return(totalReturn)
+  return(c(totalReturn, newImageLoc = paste0(pathToWorkingDir, imageName,"-", time, "Data.RDS")))
 }
 
