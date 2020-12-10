@@ -134,7 +134,8 @@ test_that("Triple is identified and non triple is okay", {
   double <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
   expectedTriple <- TRUE
   expectedDuble <- FALSE
-  expect_equal(triple_check(triple, topCut = topcutTrip, bottomCut = bottomcutTrip), expectedTriple)
+  expect_warning(triple_check(triple, topCut = topcutTrip, bottomCut = bottomcutTrip),# expectedTriple)
+                 regexp = "Possible Triple Found")
   expect_equal(triple_check(double, topCut = topcutDub, bottomCut = bottomcutDub), expectedDuble)
 })
 
