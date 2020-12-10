@@ -16,13 +16,13 @@ isolate_traces(
 \item{imageMatrix}{The processed Image matrix with import_process_image()
 and trimmed if applicable}
 
+\item{topEnvelope}{Top envelope for the top trace (scaled to your matrix correctly)}
+
 \item{topLowerEnvelope}{Bottom envelope for the top trace (scaled to your matrix correctly)}
 
 \item{bottomUpperEnvelope}{The top envelope for the second trace (scaled to your matrix correctly)}
 
-\item{topEnv}{Upper envelope for top trace (scaled to your matrix correctly)}
-
-\item{bottomEnv}{Lower envelope for the second trace (scaled to your matrix correctly)}
+\item{bottomEnvelope}{Bottom envelope for the bottom trace (scaled to your matrix correctly)}
 }
 \value{
 list of both isolated trace matrices

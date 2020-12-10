@@ -7,7 +7,6 @@
 #'@param fileLoc the path from ~/ to the dir where the file is
 #'@export
 
-
 tiff_import <- function(fileName,fileLoc){
   if (!is.character(fileName) || length(fileName) != 1) {
     return(stop("fileName must be a single character"))
@@ -258,6 +257,9 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #' doesn't need to be a point for each column in original picture, will fill in the blanks
 #' @param improveBBottomEnvelope data.frame of col x and col y representing points for bottom of the bottom envelope pair
 #' doesn't need to be a point for each column in original picture, will fill in the blanks
+#' @param topCut Top cutoff between the date writing and the top trace
+#' @param trimTop how much has been trimmed by TISI or TIS
+#' @param trimBottom  how much has been trimmed by TISI or TIS
 #'
 #' @return list of all four envelopes
 #' @export
@@ -455,10 +457,10 @@ find_cuts <- function(imageMatrix, cutPercentage = 2, percentFromEdge = 2,
 #'
 #' @param imageMatrix The processed Image matrix with import_process_image()
 #' and trimmed if applicable
-#' @param topEnv Upper envelope for top trace (scaled to your matrix correctly)
 #' @param topLowerEnvelope Bottom envelope for the top trace (scaled to your matrix correctly)
+#' @param topEnvelope Top envelope for the top trace (scaled to your matrix correctly)
+#' @param bottomEnvelope Bottom envelope for the bottom trace (scaled to your matrix correctly)
 #' @param bottomUpperEnvelope The top envelope for the second trace (scaled to your matrix correctly)
-#' @param bottomEnv Lower envelope for the second trace (scaled to your matrix correctly)
 #'
 #' @return list of both isolated trace matrices
 #' @export
@@ -490,7 +492,9 @@ isolate_traces <- function(imageMatrix, topEnvelope, topLowerEnvelope,
 #' @param maxNoise The length of creating points allowed before considered to be off of the trace
 #' @param pathToWorkingDir Which directory you want the image to end up in
 #' @param imageName The name of the image (usually the file name)
-
+#' @param plotEnv The envelope that you would like to put onto the plot
+#' @param intersectionFlag If intersection is known to user, or is found with TISI or TIS,
+#' will not plot full, will consider it to be a failed process plot
 #'
 #' @return void
 #' @export
@@ -526,7 +530,7 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
     time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
                                 spaceRemove[[1]][1], spaceRemove[[1]][2],
                                 timePieces[[1]][2], timePieces[[1]][3]))
-    png(paste0(pathToWorkingDir, imageName,"-",time,"-plot", ".png"))
+    grDevices::png(paste0(pathToWorkingDir, imageName,"-",time,"-plot", ".png"))
   }else{# is an intersection so we consider it a fail process
     datePieces <- strsplit(as.character(Sys.time()), split = "-")
     timePieces <- strsplit(datePieces[[1]][3], ":")
@@ -534,20 +538,20 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
     time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
                                  spaceRemove[[1]][1], spaceRemove[[1]][2],
                                  timePieces[[1]][2], timePieces[[1]][3]))
-    png(paste0(pathToWorkingDir, imageName,"-",time ,"-FailToProcess", "-plot", ".png"))
+    grDevices::png(paste0(pathToWorkingDir, imageName,"-",time ,"-FailToProcess", "-plot", ".png"))
   }
   suppressWarnings(rtiff::plot.matrix(imageMatrix))
-  lines(plotEnvelopes$TopEnvelope, col = "green")
-  lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
-  lines(plotEnvelopes$BottomUpperEnvelope, col = "green")
-  lines(plotEnvelopes$BottomEnvelope, col = "yellow")
-  lines(newTopTrace, col = "red")
-  lines(newBottomTrace, col = "red")
-  abline(h = (nrow(imageMatrix) - topCut), col = "red")
-  abline(h = (nrow(imageMatrix) - bottomCut), col = "red")
-  abline(v = topStartEnds, col = "green")
-  abline(v = bottomStartEnds, col = "orange")
-  dev.off() #close png file
+  graphics::lines(plotEnvelopes$TopEnvelope, col = "green")
+  graphics::lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
+  graphics::lines(plotEnvelopes$BottomUpperEnvelope, col = "green")
+  graphics::lines(plotEnvelopes$BottomEnvelope, col = "yellow")
+  graphics::lines(newTopTrace, col = "red")
+  graphics::lines(newBottomTrace, col = "red")
+  graphics::abline(h = (nrow(imageMatrix) - topCut), col = "red")
+  graphics::abline(h = (nrow(imageMatrix) - bottomCut), col = "red")
+  graphics::abline(v = topStartEnds, col = "green")
+  graphics::abline(v = bottomStartEnds, col = "orange")
+  grDevices::dev.off() #close png file
 
   return(time)
 }
@@ -577,13 +581,13 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
   time <- as.character(paste0(datePieces[[1]][1], datePieces[[1]][2],
                               spaceRemove[[1]][1], spaceRemove[[1]][2],
                               timePieces[[1]][2], timePieces[[1]][3]))
-  png(paste0(pathToWorkingDir, imageName, "-" ,time,  "-FailToProcess-Plot",".png"))
+  grDevices::png(paste0(pathToWorkingDir, imageName, "-" ,time,  "-FailToProcess-Plot",".png"))
   suppressWarnings(rtiff::plot.matrix(imageMatrix))
-  abline(h = (nrow(imageMatrix) - topCut), col = "green")
-  abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
-  text("This Isn't Processed", x = 3000, y = 1500, col = "orange")
+  graphics::abline(h = (nrow(imageMatrix) - topCut), col = "green")
+  graphics::abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
+  graphics::text("This Isn't Processed", x = 3000, y = 1500, col = "orange")
   # Close the png file
-  dev.off()
+  grDevices::dev.off()
 
   return(time)
 }
@@ -767,6 +771,7 @@ env_start_end <- function(traceMatrix, thresh = 300, gapLengthCutoff = 20, retur
 #' @param rmAmount The amount ignored from both the right and left sides
 #' of the image where possible trace lines could intersect because of noise
 #' This is to ensure that false intersections aren't found between the two traces
+#'
 #' @return warning if there is an intersection
 #' @export
 intersection_check <- function(topEnv, bottomEnv, imageName, rmAmount = 300){
@@ -1205,62 +1210,61 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 }
 
 
-
-#' TIS_automation
-#' @return
-#' @export
-TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInImageName, ignoreErrorMessage = FALSE){
-
-  # Dimension check on the DigitizationTODO Dataframe
-  if (dim.data.frame(DigitizationTODO)[2] != 6) {
-    Error <- "Your dataframe has the wrong dimentions, should be 6 columns with 3rd being TRUE or FALSE"
-    return(stop(Error))
-  }
-  foundWithKeyword <- grep(keywordInImageName, x = DigitizationTODO$ImageName) # Find all images in DigitizationTODO
-  #with that keyword
-
-  for (i in foundWithKeyword) {
-
-    if (DigitizationTODO$DigitizedYet[i] == "FALSE") { # Checking if digitized yet
-      filePath <- as.character(DigitizationTODO$ImagePath[i])
-      imageName <- as.character(DigitizationTODO$ImageName[i])
-
-      ErrorMessage <- DigitizationTODO$ErrorWhenDigitized[i]
-      if (is.na(ErrorMessage) || isTRUE(ignoreErrorMessage)) { # If there is an error message about the data (like there isn't any data)
-
-        # Check for the year directory, if doesn't exist, it is created
-        imagePWD <- .dir_Str(imageName = imageName, pathToWorkingDir = pathToDigitizationDir)
-
-        # Do the digitization
-        Digitization <- TIS(imageName = imageName, fileLoc = filePath, pathToWorkingDir = imagePWD, HDVcheck = TRUE)
-
-        # Different outcomes for the digitization attempt
-        if (length(Digitization$Warnings) == 0) { # no warnings, therefore a sucessfull digitization
-          DigitizationTODO$DigitizedYet[i] = TRUE
-          DigitizationTODO$DigitizationPath[i] = imagePWD
-          DigitizationTODO$DigitizationName[i] = paste0(imageName, "-Digitized,RDS")
-          saveRDS(Digitization, file = paste0(imagePWD, imageName, "-Digitized.RDS"))
-        }
-        else if (inherits(Digitization, "warning")) { #Should only happen if there is an HDV warning
-          print(Digitization)
-          DigitizationTODO$ErrorWhenDigitized[i] == Digitization
-        }
-        else {# there are warnings so, it is considered to be a failed to process not considered to be digitized yet
-          print(Digitization$Warnings)
-          DigitizationTODO$ErrorWhenDigitized[i] == Digitization$Warnings
-          saveRDS(Digitization, file = paste0(imagePWD,"FailedToProcess/", imageName, "-FailToProcess-Data.RDS"))
-        }
-      }
-      else {
-        print("Skipping.. previous error when digitizing")
-        print(DigitizationTODO$ErrorWhenDigitized[i])
-      }
-    }
-    print("-----------")
-    write.csv(DigitizationTODO, file = DigitizationTODOFileNameAndPath) # updates the .csv
-    #after each digitization so that we won't loose any data
-  }
-}
+## dont need this right now, using multy processing in Digitization Computing#' TIS_automation
+# @return
+# @export
+# TIS_automation <- function(DigitizationTODO, pathToDigitizationDir, keywordInImageName, ignoreErrorMessage = FALSE){
+#
+#   # Dimension check on the DigitizationTODO Dataframe
+#   if (dim.data.frame(DigitizationTODO)[2] != 6) {
+#     Error <- "Your dataframe has the wrong dimentions, should be 6 columns with 3rd being TRUE or FALSE"
+#     return(stop(Error))
+#   }
+#   foundWithKeyword <- grep(keywordInImageName, x = DigitizationTODO$ImageName) # Find all images in DigitizationTODO
+#   #with that keyword
+#
+#   for (i in foundWithKeyword) {
+#
+#     if (DigitizationTODO$DigitizedYet[i] == "FALSE") { # Checking if digitized yet
+#       filePath <- as.character(DigitizationTODO$ImagePath[i])
+#       imageName <- as.character(DigitizationTODO$ImageName[i])
+#
+#       ErrorMessage <- DigitizationTODO$ErrorWhenDigitized[i]
+#       if (is.na(ErrorMessage) || isTRUE(ignoreErrorMessage)) { # If there is an error message about the data (like there isn't any data)
+#
+#         # Check for the year directory, if doesn't exist, it is created
+#         imagePWD <- .dir_Str(imageName = imageName, pathToWorkingDir = pathToDigitizationDir)
+#
+#         # Do the digitization
+#         Digitization <- TIS(imageName = imageName, fileLoc = filePath, pathToWorkingDir = imagePWD, HDVcheck = TRUE)
+#
+#         # Different outcomes for the digitization attempt
+#         if (length(Digitization$Warnings) == 0) { # no warnings, therefore a sucessfull digitization
+#           DigitizationTODO$DigitizedYet[i] = TRUE
+#           DigitizationTODO$DigitizationPath[i] = imagePWD
+#           DigitizationTODO$DigitizationName[i] = paste0(imageName, "-Digitized,RDS")
+#           saveRDS(Digitization, file = paste0(imagePWD, imageName, "-Digitized.RDS"))
+#         }
+#         else if (inherits(Digitization, "warning")) { #Should only happen if there is an HDV warning
+#           print(Digitization)
+#           DigitizationTODO$ErrorWhenDigitized[i] == Digitization
+#         }
+#         else {# there are warnings so, it is considered to be a failed to process not considered to be digitized yet
+#           print(Digitization$Warnings)
+#           DigitizationTODO$ErrorWhenDigitized[i] == Digitization$Warnings
+#           saveRDS(Digitization, file = paste0(imagePWD,"FailedToProcess/", imageName, "-FailToProcess-Data.RDS"))
+#         }
+#       }
+#       else {
+#         print("Skipping.. previous error when digitizing")
+#         print(DigitizationTODO$ErrorWhenDigitized[i])
+#       }
+#     }
+#     print("-----------")
+#     write.csv(DigitizationTODO, file = DigitizationTODOFileNameAndPath) # updates the .csv
+#     #after each digitization so that we won't loose any data
+#   }
+# }
 
 
 
@@ -1403,7 +1407,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 CreateTraceThreshold = 5, MARange = 6, region = 2,
                 loopNumber = 4, spikeThreshold = 50, k = 40){
   if(isTRUE(improvement)){
-  pathToWorkingDir <- magneto:::.dir_Str_Improvement(imageName = imageName, pathToWorkingDir = pathToWorkingDir)
+  pathToWorkingDir <- .dir_Str_Improvement(imageName = imageName, pathToWorkingDir = pathToWorkingDir)
   }
   traceWarnings <- vector()
   typeCheck <- NULL # if you aren't using the HDV check

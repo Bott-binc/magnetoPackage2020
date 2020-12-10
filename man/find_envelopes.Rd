@@ -29,6 +29,8 @@ find_envelopes(
 \item{bottomCut}{a point that is the height of a horizontal line between the timing marks
 and the bottom trace}
 
+\item{topCut}{Top cutoff between the date writing and the top trace}
+
 \item{returnType}{Either "MatrixScaled" used if you are manipulating with imageMatrix,
 "plottingScaled" used if you are plotting the imageMatrix with overlay of these lines
 "rolledImageScaled" used if you are overlaying the rolled image with these lines}
@@ -50,6 +52,10 @@ doesn't need to be a point for each column in original picture, will fill in the
 
 \item{improveBBottomEnvelope}{data.frame of col x and col y representing points for bottom of the bottom envelope pair
 doesn't need to be a point for each column in original picture, will fill in the blanks}
+
+\item{trimTop}{how much has been trimmed by TISI or TIS}
+
+\item{trimBottom}{how much has been trimmed by TISI or TIS}
 }
 \value{
 list of all four envelopes

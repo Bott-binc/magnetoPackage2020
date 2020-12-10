@@ -41,6 +41,8 @@ and the timing marks (if a line can be found)}
 
 \item{bottomTrace}{Bottom trace matrix for the isolated trace}
 
+\item{plotEnv}{The envelope that you would like to put onto the plot}
+
 \item{maxNoise}{The length of creating points allowed before considered to be off of the trace}
 
 \item{max_roc}{Maximum rate of change allowed between two pixels on the line before deemed as noisee}
@@ -50,6 +52,9 @@ and the timing marks (if a line can be found)}
 \item{pathToWorkingDir}{Which directory you want the image to end up in}
 
 \item{imageName}{The name of the image (usually the file name)}
+
+\item{intersectionFlag}{If intersection is known to user, or is found with TISI or TIS,
+will not plot full, will consider it to be a failed process plot}
 }
 \value{
 void

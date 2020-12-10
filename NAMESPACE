@@ -2,7 +2,6 @@
 
 export(TIS)
 export(TISI)
-export(TIS_automation)
 export(bright)
 export(env_start_end)
 export(find_cuts)
