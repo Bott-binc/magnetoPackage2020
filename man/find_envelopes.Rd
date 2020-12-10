@@ -8,6 +8,7 @@ find_envelopes(
   imageMatrix,
   rolledImage,
   bottomCut,
+  topCut,
   returnType,
   sepDist = 10,
   max_roc = 25,
@@ -15,7 +16,9 @@ find_envelopes(
   improveTTopEnvelope = data.frame(x = NA, y = NA),
   improveBTopEnvelope = data.frame(x = NA, y = NA),
   improveTBottomEnvelope = data.frame(x = NA, y = NA),
-  improveBBottomEnvelope = data.frame(x = NA, y = NA)
+  improveBBottomEnvelope = data.frame(x = NA, y = NA),
+  trimTop = 0,
+  trimBottom = 0
 )
 }
 \arguments{

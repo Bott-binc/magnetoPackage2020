@@ -13,6 +13,7 @@ plot_success(
   bottomStartEnds,
   topTrace,
   bottomTrace,
+  plotEnv,
   maxNoise = 250,
   max_roc = 35,
   sepDist = 10,
