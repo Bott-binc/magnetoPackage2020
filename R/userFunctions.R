@@ -99,7 +99,6 @@ bright <- function(imageMatrix, beta0 = -2.774327, beta1 = 51.91687, cutoffProba
 #' (starts are green, ends are blue)
 #'
 #' @return data frame of peaks, peak heights, starts and ends for each peak
-#' @export
 find_peaks <- function(rowSums, minDistance, maxPeakNumber, percentFromEdge, percentEdgeForLeft = NULL,
                        minPeakHeight = (0.05*max(rowSums)), plots = TRUE, StartEndplotLine = TRUE) {
   if (!is.vector(rowSums, mode = "numeric")) {
@@ -226,6 +225,7 @@ import_process_image <- function(imageName, file_loc, trimAmountTop = 100,
 #' @param k See rollMean() in zoo for details
 #'
 #' @return rolled image matrix to user
+#' @export
 mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k = 40){
   imageWithoutTopBottom <- imageMatrix[-c(0:topcut, bottomcut:nrow(imageMatrix)), ]
   vert <- t(imageWithoutTopBottom)
@@ -367,6 +367,7 @@ find_envelopes <- function(imageMatrix, rolledImage, bottomCut, topCut,  returnT
 #' @param loopNumber How many times it will go through this process, (to catch the new peaks from smoothing)
 #'
 #' @return Matrix of the line, corrected for the matrix
+#' @export
 create_trace <- function(traceMatrix, start, end, topEnv, bottomEnv, thresh = 5, MARange = 6, region = 2, loopNumber = 4){
   traceLine <- vector()
   for (i in start:end) {
@@ -820,7 +821,7 @@ spike_check <- function(trace, spikeThreshold = 50){
 #' for the image to be considered to be a triple.
 #'
 #' @return TRUE or FALSE for finding a triple or not
-#' @export
+
 triple_check <- function(imageMatrix, topCut, bottomCut, minDistance = 50, percentFromEdge = 2, thresholdHeight = 200,
                           thresholdDistance = 250, threshCutImage = 500){
   sums <- rowSums(imageMatrix)

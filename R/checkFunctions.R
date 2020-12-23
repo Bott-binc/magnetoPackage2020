@@ -40,7 +40,6 @@
 #' @param filePath The path for the directory where the file is located
 #' @param fileName The name of the file located in the path directory
 #' @return a bool of TRUE or FALSE
-#' @export
 not_empty_file <- function(filePath, fileName){
   if (is.na(filePath) ||  is.na(fileName)) {
     return(stop("missing filePath or fileName"))
