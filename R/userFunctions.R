@@ -241,8 +241,8 @@ mean_roll_image <- function(imageMatrix, topcut, bottomcut, fill = "extend", k =
 #'
 #' @param imageMatrix ImageMatrix from import_process_image()
 #' @param returnType Either "MatrixScaled" used if you are manipulating with imageMatrix,
-#' "plottingScaled" used if you are plotting the imageMatrix with overlay of these lines
-#' "rolledImageScaled" used if you are overlaying the rolled image with these lines
+#' "PlottingScaled" used if you are plotting the imageMatrix with overlay of these lines
+#' "RolledImageScaled" used if you are overlaying the rolled image with these lines
 #' @param max_roc maximum rate of change allowed between two pixels on the line before deemed as noise
 #' @param sepDist how far you want the envelope to be below the line you are tracing
 #' @param maxNoise the length of creating points allowed before considered to be off of the trace
@@ -431,18 +431,18 @@ find_cuts <- function(imageMatrix, cutPercentage = 2, percentFromEdge = 2,
                       percentEdgeForLeft = NULL, shortestAllowedSeqOfZeros = 25){
 
   imageSides <- .get_trace_start_ends(imageMatrix, returnMat = FALSE,
-                                      cutPercentage = 2) # two vertical lines for top and bottom est
+                                      cutPercentage = cutPercentage) # two vertical lines for top and bottom est
 
   imageWithoutSides <- imageMatrix[, -c(0:imageSides$Start, #takes away the sides found above
                                         imageSides$End:ncol(imageMatrix))]
   # finds top horizontal line
-  topCut <- tryCatch(.top_image_cut(imageMatrix = imageWithoutSides, percentFromEdge = 2,
-                                    percentEdgeForLeft = 25), warning = function(w) w)
+  topCut <- tryCatch(.top_image_cut(imageMatrix = imageWithoutSides, percentFromEdge = percentFromEdge,
+                                    percentEdgeForLeft = percentEdgeForLeft), warning = function(w) w)
   #finds bottom horizontal line
   bottomCut <- tryCatch(.bottom_image_cut(imageMatrix = imageWithoutSides,
-                                          percentEdgeForLeft = 25,
-                                          percentFromEdge = 2,
-                                          shortestAllowedSeqOfZeros = 25),
+                                          percentEdgeForLeft = percentEdgeForLeft,
+                                          percentFromEdge = percentFromEdge,
+                                          shortestAllowedSeqOfZeros = shortestAllowedSeqOfZeros),
                         warning = function(w) w)
 
   return(list(TopCut = topCut, BottomCut = bottomCut )) # warnings are caught one level above
@@ -955,6 +955,10 @@ triple_check <- function(imageMatrix, topCut, bottomCut, minDistance = 50, perce
 #' (anything above the threshold will be sent to warning)
 #' @param k See rollMean() in zoo package for details
 #' @param saveData allows the user to save the data to the working directory
+#' @param gapLengthCutoff How large the gap between the writing at the start of the trace (seen in Fig 7)
+#' and the  actual start of the trace must be in order to consider that point the new start, if gap is less
+#' then cutoff, will keep looking until it gets to the thresh value.  If no writing on start of traces,
+#'  this can be set to 0.
 #'
 #' @return
 #' @export
@@ -976,7 +980,7 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 OffsetDistanceForEnvelopes = 10, maxEnvelopeROC = 35, maxNoise = 250,
                 envelopeStartEndThreshold = 300, intersetionRemoveAmount = 1000,
                 CreateTraceThreshold = 5, MARange = 6, region = 2,
-                loopNumber = 4, spikeThreshold = 50, k = 40){
+                loopNumber = 4, spikeThreshold = 50, k = 40, gapLengthCutOff = 20){
 
   traceWarnings <- vector()
   typeCheck <- NULL # if you aren't using the HDV check
@@ -1084,9 +1088,11 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                                       bottomEnvelope = matrixEnvelopes$BottomEnvelope)
 
       TopStartsEnds <- env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
-                                      returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+                                      returnMatrix = FALSE, thresh = envelopeStartEndThreshold,
+                                      gapLengthCutoff = gapLengthCutOff)
       BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
-                                         returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+                                         returnMatrix = FALSE, thresh = envelopeStartEndThreshold,
+                                        gapLengthCutoff = gapLengthCutOff)
 
       # Checking Envelopes for Intersections ---------------------------------------
 
@@ -1374,6 +1380,10 @@ TIS <- function(imageName, fileLoc, pathToWorkingDir = "~/",
 #' doesn't need to be a point for each column in original picture, will fill in the blanks
 #' @param improveTopEnvelopeStartEnd Vector of length 2, start and end point respectively
 #' @param improveBottomEnvelopeStartEnd Vector of length 2, start and end point respectively
+#' @param gapLengthCutoff How large the gap between the writing at the start of the trace (seen in Fig 7)
+#' and the  actual start of the trace must be in order to consider that point the new start, if gap is less
+#' then cutoff, will keep looking until it gets to the thresh value.  If no writing on start of traces,
+#'  this can be set to 0.
 #'
 #' @return
 #' @export
@@ -1406,7 +1416,7 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
                 OffsetDistanceForEnvelopes = 10, maxEnvelopeROC = 35, maxNoise = 250,
                 envelopeStartEndThreshold = 300, intersetionRemoveAmount = 1000,
                 CreateTraceThreshold = 5, MARange = 6, region = 2,
-                loopNumber = 4, spikeThreshold = 50, k = 40){
+                loopNumber = 4, spikeThreshold = 50, k = 40, gapLengthCutoff = 20){
   if(isTRUE(improvement)){
   pathToWorkingDir <- .dir_Str_Improvement(imageName = imageName, pathToWorkingDir = pathToWorkingDir)
   }
@@ -1557,7 +1567,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
       }
     else {
     TopStartsEnds <- env_start_end(traceMatrix = traceMatrices$TopTraceMatrix,
-                                   returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+                                   returnMatrix = FALSE, thresh = envelopeStartEndThreshold,
+                                   gapLengthCutoff = gapLengthCutoff)
     }
     if (!is.na(improveBottomEnvelopeStartEnd[1]) &  length(improveBottomEnvelopeStartEnd) == 2){
       BottomStartsEnds <- data.frame(Start = improveBottomEnvelopeStartEnd[1],
@@ -1568,7 +1579,8 @@ TISI <- function(imageName, fileLoc, pathToWorkingDir = "~/",
     }
     else {
       BottomStartsEnds <- env_start_end(traceMatrix = traceMatrices$BottomTraceMatrix,
-                                        returnMatrix = FALSE, thresh = envelopeStartEndThreshold)
+                                        returnMatrix = FALSE, thresh = envelopeStartEndThreshold,
+                                        gapLengthCutoff = gapLengthCutoff)
     }
 
     # Checking Envelopes for Intersections ---------------------------------------

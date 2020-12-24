@@ -32,8 +32,8 @@ and the bottom trace}
 \item{topCut}{Top cutoff between the date writing and the top trace}
 
 \item{returnType}{Either "MatrixScaled" used if you are manipulating with imageMatrix,
-"plottingScaled" used if you are plotting the imageMatrix with overlay of these lines
-"rolledImageScaled" used if you are overlaying the rolled image with these lines}
+"PlottingScaled" used if you are plotting the imageMatrix with overlay of these lines
+"RolledImageScaled" used if you are overlaying the rolled image with these lines}
 
 \item{sepDist}{how far you want the envelope to be below the line you are tracing}
 

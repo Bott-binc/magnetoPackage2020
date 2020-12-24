@@ -51,7 +51,8 @@ TISI(
   region = 2,
   loopNumber = 4,
   spikeThreshold = 50,
-  k = 40
+  k = 40,
+  gapLengthCutoff = 20
 )
 }
 \arguments{
@@ -187,6 +188,11 @@ checks for abnormal spikes in the tracing algorithm, could be due to a jump from
 (anything above the threshold will be sent to warning)}
 
 \item{k}{See rollMean() in zoo package for details}
+
+\item{gapLengthCutoff}{How large the gap between the writing at the start of the trace (seen in Fig 7)
+and the  actual start of the trace must be in order to consider that point the new start, if gap is less
+then cutoff, will keep looking until it gets to the thresh value.  If no writing on start of traces,
+ this can be set to 0.}
 }
 \value{
 
