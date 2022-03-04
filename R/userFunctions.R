@@ -541,7 +541,7 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
                                  timePieces[[1]][2], timePieces[[1]][3]))
     grDevices::png(paste0(pathToWorkingDir, imageName,"-",time ,"-FailToProcess", "-plot", ".png"))
   }
-  suppressWarnings(rtiff::plot.matrix(imageMatrix))
+  suppressWarnings(magneto::plot.matrix(imageMatrix))
   graphics::lines(plotEnvelopes$TopEnvelope, col = "green")
   graphics::lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
   graphics::lines(plotEnvelopes$BottomUpperEnvelope, col = "green")
@@ -583,7 +583,7 @@ plot_with_warnings <- function(imageMatrix, topCut, bottomCut, pathToWorkingDir,
                               spaceRemove[[1]][1], spaceRemove[[1]][2],
                               timePieces[[1]][2], timePieces[[1]][3]))
   grDevices::png(paste0(pathToWorkingDir, imageName, "-" ,time,  "-FailToProcess-Plot",".png"))
-  suppressWarnings(rtiff::plot.matrix(imageMatrix))
+  suppressWarnings(magneto::plot.matrix(imageMatrix))
   graphics::abline(h = (nrow(imageMatrix) - topCut), col = "green")
   graphics::abline(h = (nrow(imageMatrix) - bottomCut), col = "green")
   graphics::text("This Isn't Processed", x = 3000, y = 1500, col = "orange")
