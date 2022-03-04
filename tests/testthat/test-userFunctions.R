@@ -1,19 +1,19 @@
 context(desc = "tiff_import")
 test_that("tiff_import returns only tiffs", {
-  testFile <- tiff_import(fileName = "AGC-D-18610822-18610823.tif", fileLoc = "~/magneto/tests/testData/")
-  expect_equal_to_reference(testFile, update = FALSE, file = "~/magneto/tests/testData/tiffimport1861.RDS")
+  testFile <- tiff_import(fileName = "AGC-D-18610822-18610823.tif", fileLoc = "tests/testData/")
+  expect_equal_to_reference(testFile, update = FALSE, file = "tests/testData/tiffimport1861.RDS")
 
 })
 test_that("Correct Error Reported",{
-  expect_error(tiff_import("DoesNotExist.png", "~/magneto/tests/testData/"),
+  expect_error(tiff_import("DoesNotExist.png", "tests/testData/"),
                regexp = "doesn't exist")
-  expect_error(tiff_import("test.tif", c("~/magneto/tests/testData/", "extraThing")),
+  expect_error(tiff_import("test.tif", c("tests/testData/", "extraThing")),
                regexp = "fileLoc must be a single character")
-  expect_error(tiff_import(c("test.tif", "test.tif"), "~/magneto/tests/testData/"),
+  expect_error(tiff_import(c("test.tif", "test.tif"), "tests/testData/"),
                regexp = "fileName must be a single character")
-  expect_error(tiff_import(fileName = "Emptyfile.png", fileLoc = "~/magneto/tests/testData/"),
+  expect_error(tiff_import(fileName = "Emptyfile.png", fileLoc = "tests/testData/"),
                regex = "not a .tif or .tiff")
-  expect_error(tiff_import(fileName = "Emptyfile.tiff", fileLoc = "~/magneto/tests/testData/"),
+  expect_error(tiff_import(fileName = "Emptyfile.tiff", fileLoc = "tests/testData/"),
                regexp = "is 0b/Empty")
 })
 
@@ -37,13 +37,13 @@ test_that("Correct Error Reported/Correct Warning Reported",{
 
 context(desc = "find_peaks")
 test_that("Correct return given to user", {
-  rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
-  expectedRet <- readRDS("~/magneto/tests/testData/FullPeakStartEnd.RDS")
+  rowSums <- readRDS("tests/testData/rowSums.RDS")
+  expectedRet <- readRDS("tests/testData/FullPeakStartEnd.RDS")
   expect_equal(find_peaks(rowSums = rowSums, minDistance = 100, maxPeakNumber = 4,
                           percentFromEdge = 10, plots = FALSE), expectedRet)
 })
 test_that("Correct Error Reported/Correct Warning Reported", {
-  rowSums <- readRDS("~/magneto/tests/testData/rowSums.RDS")
+  rowSums <- readRDS("tests/testData/rowSums.RDS")
   rowSumsNoPeaks <- rep(1, 1000)
   expect_error(find_peaks("This is not a numeric vector", minDistance = 100, maxPeakNumber = 4,
                           percentFromEdge = 10, plots = FALSE),
@@ -57,16 +57,16 @@ test_that("Correct Error Reported/Correct Warning Reported", {
 
 context(desc = "find_paths_for_keyword")
 test_that("Returns the correct values",{
-  expected <- "/home/ben/magneto/tests/testData/tiffimport1861.RDS"
+  expected <- "tests/testData/tiffimport1861.RDS"
   #NOTE:Symlink is on my profile, will have to change to test if on another
   expectedSymLink <- "/home/ben/magnetoMARK/Scripts/MarkW/Thesis_Comparison.R"
-  expect_equal(find_paths_for_keyword(path = "~/magneto/tests", keyword = "tiffimport1861"), expected)
+  expect_equal(find_paths_for_keyword(path = "tests/", keyword = "tiffimport1861"), expected)
   # dir used to be not accessable to me, thats why it didn't work, now can see it, havent changed anything still works though
   # expect_warning(expect_equal(find_paths_for_keyword(path = "~/", keyword = "Thesis"), expectedSymLink),
   #                regexp = "Failed to search directory")
 })
 test_that("Returns The Correct Error",{
-  expect_error(find_paths_for_keyword(path = "~/magneto/tests", keyword = "thereIsNoFileWithThisName"),
+  expect_error(find_paths_for_keyword(path = "tests", keyword = "thereIsNoFileWithThisName"),
                regexp = "No files found with that name")
 })
 
@@ -86,20 +86,20 @@ test_that("Returns The Correct Error",{
 
 
 
-context(desc = "import_process_image")
-test_that("Retruns the correct processed image",{
-  fileName <- "AGC-D-19211221-19211223.tif"
-  fileLocation <- "/home/ben/magnetoMARK/Images/Range/AGC-D-19210101-19240305/"
-  expected <- readRDS("~/magneto/tests/testData/processedAGC-D-19211221.RDS")
-  expect_equal(import_process_image(fileName, fileLocation), expected)
-})
+# context(desc = "import_process_image")
+# test_that("Retruns the correct processed image",{
+#   fileName <- "AGC-D-19211221-19211223.tif"
+#   fileLocation <- "/home/ben/magnetoMARK/Images/Range/AGC-D-19210101-19240305/"
+#   expected <- readRDS("~/magneto/tests/testData/processedAGC-D-19211221.RDS")
+#   expect_equal(import_process_image(fileName, fileLocation), expected)
+# })
 
 
 
 context(desc = "mean_roll_image")
 test_that("rolls the correct way", {
-  imageMatrix <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
-  expected <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
+  imageMatrix <- readRDS("tests/testData/matrixImageH-19260103.RDS")
+  expected <- readRDS("tests/testData/rolledImage.RDS")
   topcut <- 612
   bottomcut <- 1114
   expect_equal(mean_roll_image(imageMatrix, topcut = topcut, bottomcut = bottomcut), expected)
