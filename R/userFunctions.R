@@ -541,8 +541,7 @@ plot_success <- function(imageMatrix, rolledImage, topCut, bottomCut, topStartEn
                                  timePieces[[1]][2], timePieces[[1]][3]))
     grDevices::png(paste0(pathToWorkingDir, imageName,"-",time ,"-FailToProcess", "-plot", ".png"))
   }
-  browser()
-  suppressWarnings(plot.matrix(imageMatrix))#magneto::plot.matrix(imageMatrix))
+  suppressWarnings(plot.matrix(imageMatrix))
   graphics::lines(plotEnvelopes$TopEnvelope, col = "green")
   graphics::lines(plotEnvelopes$TopLowerEnvelope, col = "yellow")
   graphics::lines(plotEnvelopes$BottomUpperEnvelope, col = "green")

@@ -10,7 +10,7 @@
 #'
 plot.matrix <-
 function (x, ...) {
-  plot(newPixmapRGB(x, x, x), ...)#magneto:::newPixmapRGB(x, x, x), ...)
+  pixmap::plot(newPixmapRGB(x, x, x), ...)
 }
 
 
