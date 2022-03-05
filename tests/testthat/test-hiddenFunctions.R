@@ -95,7 +95,7 @@ test_that("Returns the correct start and ends",{
                          Height = c(152775.73, 149577.55, 29652.66, 26414.92),
                          PeakStart = c(1656, 1454, 973, 800),
                          PeakEnd = c(1760, 1534, 1101, 824))
-  rowSums = readRDS("~/magneto/tests/testData/rowSums.RDS")
+  rowSums = readRDS("tests/testData/rowSums.RDS")
   ConstDecreasingPeak <- data.frame(Index = 1000, Height = 2)
   constDecExpected <- data.frame(Index = 1000, Height = 2, PeakStart = 1, PeakEnd = 1999)
   rowSumsDec = c(rep(1,999), 2, rep(1, 1000))
@@ -107,8 +107,8 @@ test_that("Returns the correct start and ends",{
 
 context(desc = ".not_bright_image")
 test_that("scales correctly with correct return", {
-  image <- readRDS("~/magneto/tests/testData/nonBrightImage.RDS")
-  expected <- readRDS("~/magneto/tests/testData/nonBrightRet.RDS")
+  image <- readRDS("tests/testData/nonBrightImage.RDS")
+  expected <- readRDS("tests/testData/nonBrightRet.RDS")
   expect_equal(.not_bright_image(imageMatrix = image), expected)
 })
 
@@ -117,8 +117,8 @@ test_that("scales correctly with correct return", {
 
 context(desc = ".for_bright_image")
 test_that("scales correctly with correct return", {
-  image <- readRDS("~/magneto/tests/testData/brightImageRAW.RDS")
-  expected <- readRDS("~/magneto/tests/testData/forBrightnessRet.RDS")
+  image <- readRDS("tests/testData/brightImageRAW.RDS")
+  expected <- readRDS("tests/testData/forBrightnessRet.RDS")
   expect_equal(.for_bright_image(imageMatrix = image), expected)
 })
 
@@ -126,9 +126,9 @@ test_that("scales correctly with correct return", {
 #NOTE: this function is becoming depreciated needs to be reworked or removed
 context(desc = ".get_trace_start_ends")
 test_that("correctStart and end found for an image",{
-  image <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
+  image <- readRDS("tests/testData/StartEndTest-nonBright.RDS")
   expected <- list(Start = 700, End = 4927)
-  expectedFullReturn <- readRDS("~/magneto/tests/testData/StartEndTestFullRet.RDS")
+  expectedFullReturn <- readRDS("tests/testData/StartEndTestFullRet.RDS")
   expect_equal(.get_trace_start_ends(image, returnMat = FALSE), expected)
   expect_equal(.get_trace_start_ends(image, returnMat = TRUE), expectedFullReturn)
 })
@@ -139,7 +139,7 @@ context(desc = ".top_image_cut")
 test_that("correct top image cuttoff is found",{
   # WARNING, these images for this set of tests have a lot of pre-processing on it, use testingEnv
   #if you want to change it These are from batch 5 TODO, 1
-  image <- readRDS("~/magneto/tests/testData/TopImageCut-BottomImageCut.RDS")
+  image <- readRDS("tests/testData/TopImageCut-BottomImageCut.RDS")
   expected <- 441
   expect_equal(.top_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1), expected)
 })
@@ -156,15 +156,15 @@ context(desc = ".bottom_image_cut")
 test_that("correct bottom image cuttoff is found",{
   # WARNING, these images for this set of tests have a lot of pre-processing on it, use testingEnv
   #if you want to change it. These are from batch 5 TODO, 1, 21860, 3069, respectively
-  image <- readRDS("~/magneto/tests/testData/TopImageCut-BottomImageCut.RDS")
+  image <- readRDS("tests/testData/TopImageCut-BottomImageCut.RDS")
   expected <- 1049
   expect_equal(.bottom_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1), expected)
 })
 test_that("Correct Warnings returned to user",{
-  imageIntersection <- readRDS("~/magneto/tests/testData/bottomIntersectionFound.RDS")
+  imageIntersection <- readRDS("tests/testData/bottomIntersectionFound.RDS")
   expect_warning(.bottom_image_cut(imageIntersection, percentFromEdge = 1, percentEdgeForLeft = 25),
                  regexp = "Intersection in Timing Found")
-  noCutImage <- readRDS("~/magneto/tests/testData/bottomNoCut.RDS")#this is a bad image
+  noCutImage <- readRDS("tests/testData/bottomNoCut.RDS")#this is a bad image
   expect_warning(.bottom_image_cut(noCutImage, percentFromEdge = 1, percentEdgeForLeft = 25),
                  regexp = "No cuts found.. defaulting to bottom of the image")
 })
@@ -173,10 +173,10 @@ test_that("Correct Warnings returned to user",{
 
 context(desc = ".process_image")
 test_that("correct processed image gets returned to the user",{
-  darkImage <- readRDS("~/magneto/tests/testData/StartEndTest-nonBright.RDS")
-  brightImage <- readRDS("~/magneto/tests/testData/brightImageRAW.RDS")
-  expectedDark <- readRDS("~/magneto/tests/testData/nonBrightExpected.RDS")
-  expectedBright <- readRDS("~/magneto/tests/testData/brightExpected.RDS")
+  darkImage <- readRDS("tests/testData/StartEndTest-nonBright.RDS")
+  brightImage <- readRDS("tests/testData/brightImageRAW.RDS")
+  expectedDark <- readRDS("tests/testData/nonBrightExpected.RDS")
+  expectedBright <- readRDS("tests/testData/brightExpected.RDS")
   expect_equal(.process_image(darkImage), expectedDark)
   expect_equal(.process_image(brightImage), expectedBright)
 })
@@ -194,8 +194,8 @@ test_that("correct dataframe of indexes and lengths returned", {
 
 context(desc = ".top_env")
 test_that("correct line chosen for the top envelope for the image",{
-  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
-  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledTopEnv.RDS")
+  rolledImage <- readRDS("tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("tests/testData/rolledTopEnv.RDS")
   expect_equal(.top_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
 })
 
@@ -203,8 +203,8 @@ test_that("correct line chosen for the top envelope for the image",{
 
 context(desc = ".top_lower_env")
 test_that("correct line chosen for the top lower envelope for the image",{
-  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
-  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledTopLowerEnv.RDS")
+  rolledImage <- readRDS("tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("tests/testData/rolledTopLowerEnv.RDS")
   expect_equal(.top_lower_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
 })
 
@@ -212,8 +212,8 @@ test_that("correct line chosen for the top lower envelope for the image",{
 
 context(desc = ".bottom_upper_env")
 test_that("correct line chosen for the bottom upper envelope for the image",{
-  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
-  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledBottomUpperEnv.RDS")
+  rolledImage <- readRDS("tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("tests/testData/rolledBottomUpperEnv.RDS")
   expect_equal(.bottom_upper_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
 })
 
@@ -221,8 +221,8 @@ test_that("correct line chosen for the bottom upper envelope for the image",{
 
 context(desc = ".bottom_env")
 test_that("correct line chosen for the bottom envelope for the image",{
-  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
-  expectedRolledScaled <- readRDS("~/magneto/tests/testData/rolledBottomEnv.RDS")
+  rolledImage <- readRDS("tests/testData/rolledImage.RDS")
+  expectedRolledScaled <- readRDS("tests/testData/rolledBottomEnv.RDS")
   expect_equal(.bottom_env(rolledImage, maxNoise = 250), expected = expectedRolledScaled)
 })
 
@@ -230,10 +230,10 @@ test_that("correct line chosen for the bottom envelope for the image",{
 
 context(desc = ".isolating_trace")
 test_that("Correct isolated image is returned to the user",{
-  image <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
-  topEnvelope <- readRDS("~/magneto/tests/testData/MatTopEnv.RDS") # this is matrix scaled
-  bottomEnvelope <- readRDS("~/magneto/tests/testData/MatTopLowerEnv.RDS")
-  expected <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS")
+  image <- readRDS("tests/testData/matrixImageH-19260103.RDS")
+  topEnvelope <- readRDS("tests/testData/MatTopEnv.RDS") # this is matrix scaled
+  bottomEnvelope <- readRDS("tests/testData/MatTopLowerEnv.RDS")
+  expected <- readRDS("tests/testData/TopIsolatedTraceH-19260103.RDS")
   WrongLengthEnv <- 1:100
   expect_equal(.isolating_trace(image, topEnv = topEnvelope, bottomEnv = bottomEnvelope), expected)
   expect_error(.isolating_trace(image, topEnv = WrongLengthEnv, bottomEnv = bottomEnvelope),

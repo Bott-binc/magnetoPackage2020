@@ -109,11 +109,11 @@ test_that("rolls the correct way", {
 
 context(desc = "find_envelopes")
 test_that("corret envelope is found for an image", {
-  imageMatrix <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
-  rolledImage <- readRDS("~/magneto/tests/testData/rolledImage.RDS")
-  expectedPlotting <- readRDS("~/magneto/tests/testData/envPlottingH-19260103.RDS")
-  expectedMatrix <- readRDS("~/magneto/tests/testData/envMatrixH-19260103.RDS")
-  expectedRolled <- readRDS("~/magneto/tests/testData/envRolledH-19260103.RDS")
+  imageMatrix <- readRDS("tests/testData/matrixImageH-19260103.RDS")
+  rolledImage <- readRDS("tests/testData/rolledImage.RDS")
+  expectedPlotting <- readRDS("tests/testData/envPlottingH-19260103.RDS")
+  expectedMatrix <- readRDS("tests/testData/envMatrixH-19260103.RDS")
+  expectedRolled <- readRDS("tests/testData/envRolledH-19260103.RDS")
   bottomCut <- 1114
   expect_equal(find_envelopes(rolledImage = rolledImage,imageMatrix =  imageMatrix, bottomCut, returnType = "PlottingScaled"), expectedPlotting)
   expect_equal(find_envelopes(rolledImage = rolledImage, imageMatrix = imageMatrix, bottomCut, returnType = "MatrixScaled"), expectedMatrix)
@@ -126,12 +126,12 @@ test_that("corret envelope is found for an image", {
 
 context(desc = "triple_check")
 test_that("Triple is identified and non triple is okay", {
-  triple <- readRDS("~/magneto/tests/testData/imageProcessedTripleD-18880915.RDS")
-  bottomcutTrip <- readRDS("~/magneto/tests/testData/bottomcutD-18880915.RDS")
-  bottomcutDub <- readRDS("~/magneto/tests/testData/bottomCutH-19260103.RDS")
-  topcutTrip <- readRDS("~/magneto/tests/testData/topcutD-18880915.RDS")
-  topcutDub <- readRDS("~/magneto/tests/testData/topCutH-19260103.RDS")
-  double <- readRDS("~/magneto/tests/testData/matrixImageH-19260103.RDS")
+  triple <- readRDS("tests/testData/imageProcessedTripleD-18880915.RDS")
+  bottomcutTrip <- readRDS("tests/testData/bottomcutD-18880915.RDS")
+  bottomcutDub <- readRDS("tests/testData/bottomCutH-19260103.RDS")
+  topcutTrip <- readRDS("tests/testData/topcutD-18880915.RDS")
+  topcutDub <- readRDS("tests/testData/topCutH-19260103.RDS")
+  double <- readRDS("tests/testData/matrixImageH-19260103.RDS")
   expectedTriple <- TRUE
   expectedDuble <- FALSE
   expect_warning(triple_check(triple, topCut = topcutTrip, bottomCut = bottomcutTrip),# expectedTriple)
@@ -144,8 +144,8 @@ test_that("Triple is identified and non triple is okay", {
 context(desc = "intersection_check")
 test_that("Intersection identified", {
   imageName <-  "AGC-D-19211221-19211223.tif"
-  topLowerEnv <- readRDS("~/magneto/tests/testData/topLowerIntersection.RDS")
-  bottomUpperEnv <- readRDS("~/magneto/tests/testData/bottomUpperIntersection.RDS")
+  topLowerEnv <- readRDS("tests/testData/topLowerIntersection.RDS")
+  bottomUpperEnv <- readRDS("tests/testData/bottomUpperIntersection.RDS")
   expect_warning(intersection_check(topEnv = topLowerEnv, bottomEnv = bottomUpperEnv, imageName = imageName),
                  regexp = "There is an intersection at")
 })
@@ -155,7 +155,7 @@ test_that("Intersection identified", {
 
 context(desc = "env_start_end")
 test_that("correct start and end found for an isolated trace", {
-  image <- readRDS("~/magneto/tests/testData/TopIsolatedTraceH-19260103.RDS") # this is a single trace matrix
+  image <- readRDS("tests/testData/TopIsolatedTraceH-19260103.RDS") # this is a single trace matrix
   expected <- list(Start = 312, End = 5869)
   expect_equal(env_start_end(image, returnMatrix = FALSE), expected)
 })
@@ -177,11 +177,11 @@ test_that("correct trimmed returned to the user",{
 
 context(desc = "create_trace")
 test_that("correct trace returned for image",{
-  traceMatrix <- readRDS("~/magneto/tests/testData/AGC--H-19260111-19260113.tif-TraceTopMat.RDS")
-  startEnds <- readRDS("~/magneto/tests/testData/H-19260111-StartEndsTopMat.RDS")
-  topEnv <- readRDS("~/magneto/tests/testData/H-19260111-TopEnv.RDS")
-  lowerEnv <- readRDS("~/magneto/tests/testData/H-19260111-TopLowerEnv.RDS")
-  expected <- readRDS("~/magneto/tests/testData/H-19260111-Envelope.RDS")
+  traceMatrix <- readRDS("tests/testData/AGC--H-19260111-19260113.tif-TraceTopMat.RDS")
+  startEnds <- readRDS("tests/testData/H-19260111-StartEndsTopMat.RDS")
+  topEnv <- readRDS("tests/testData/H-19260111-TopEnv.RDS")
+  lowerEnv <- readRDS("tests/testData/H-19260111-TopLowerEnv.RDS")
+  expected <- readRDS("tests/testData/H-19260111-Envelope.RDS")
   expect_equal(create_trace(traceMatrix, start = startEnds$Start, end = startEnds$End,
                             topEnv = topEnv, bottomEnv  = lowerEnv), expected)
 
@@ -194,7 +194,7 @@ context(desc = "find_cuts")
 test_that("correct top image cuttoff is found",{
   # WARNING, these images for this set of tests have a lot of pre-processing on it, use testingEnv
   #if you want to change it These are from batch 5 TODO, 1
-  image <- readRDS("~/magneto/tests/testData/TopImageCut-BottomImageCut.RDS")
+  image <- readRDS("tests/testData/TopImageCut-BottomImageCut.RDS")
   expected <- list(TopCut = 441, BottomCut = 1049)
   expect_equal(find_cuts(image, percentEdgeForLeft = 25, percentFromEdge = 1), expected)
 })
@@ -202,11 +202,11 @@ test_that("correct warning returned",{
   image <- matrix(c(1,0), nrow = 10, ncol = 10)
   expect_warning(.top_image_cut(image, percentEdgeForLeft = 25, percentFromEdge = 1),
                  regexp = "No top cuts found")
-  imageIntersection <- readRDS("~/magneto/tests/testData/bottomIntersectionFound.RDS")
-  expectedIntersection <- readRDS("~/magneto/tests/testData/find_cutsIntersction.RDS")
+  imageIntersection <- readRDS("tests/testData/bottomIntersectionFound.RDS")
+  expectedIntersection <- readRDS("tests/testData/find_cutsIntersction.RDS")
   expect_equal(find_cuts(imageIntersection, percentFromEdge = 1, percentEdgeForLeft = 25), expectedIntersection)
-  noCutImage <- readRDS("~/magneto/tests/testData/bottomNoCut.RDS")#this is a bad image
-  expectedDefault <- readRDS("~/magneto/tests/testData/find_cutsDefaultToBottom.RDS")
+  noCutImage <- readRDS("tests/testData/bottomNoCut.RDS")#this is a bad image
+  expectedDefault <- readRDS("tests/testData/find_cutsDefaultToBottom.RDS")
   expect_equal(find_cuts(noCutImage, percentFromEdge = 1, percentEdgeForLeft = 25),
                expectedDefault)
 })
@@ -215,12 +215,12 @@ test_that("correct warning returned",{
 
 context(desc = "isolate_traces")
 test_that("returns the correct separated traces",{
-  imageMatrix <- readRDS("~/magneto/tests/testData/H-19260111-ImageProcessed.RDS")
-  topEnv <- readRDS("~/magneto/tests/testData/H-19260111-TopEnv.RDS")
-  topLowerEnv <- readRDS("~/magneto/tests/testData/H-19260111-TopLowerEnv.RDS")
-  bottomUpperEnv <- readRDS("~/magneto/tests/testData/H-19260111-BottomUpperEnv.RDS")
-  bottomEnv <- readRDS("~/magneto/tests/testData/H-19260111-BottomEnv.RDS")
-  expected <- readRDS("~/magneto/tests/testData/H-19260111-TraceMats.RDS")
+  imageMatrix <- readRDS("tests/testData/H-19260111-ImageProcessed.RDS")
+  topEnv <- readRDS("tests/testData/H-19260111-TopEnv.RDS")
+  topLowerEnv <- readRDS("tests/testData/H-19260111-TopLowerEnv.RDS")
+  bottomUpperEnv <- readRDS("tests/testData/H-19260111-BottomUpperEnv.RDS")
+  bottomEnv <- readRDS("tests/testData/H-19260111-BottomEnv.RDS")
+  expected <- readRDS("tests/testData/H-19260111-TraceMats.RDS")
   expect_equal(isolate_traces(imageMatrix, topEnvelope = topEnv, topLowerEnvelope = topLowerEnv,
                               bottomUpperEnvelope = bottomUpperEnv, bottomEnvelope = bottomEnv),
                expected = expected)

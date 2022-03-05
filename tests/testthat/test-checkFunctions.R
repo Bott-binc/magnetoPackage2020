@@ -23,13 +23,13 @@ test_that(".null returns an error if the specifed parameter is null",{
 
 context(desc = "not_empty_file")
 test_that("Checking that returns correct bool",{
-  expect_equal(not_empty_file("~/magneto/tests/testData/", "AGC-D-18610822-18610823.tif"), TRUE)
-  expect_equal(not_empty_file("~/magneto/tests/testData/", "Emptyfile.png"), FALSE)
+  expect_equal(not_empty_file("tests/testData/", "AGC-D-18610822-18610823.tif"), TRUE)
+  expect_equal(not_empty_file("tests/testData/", "Emptyfile.png"), FALSE)
 
 
 })
 test_that("Correct Error Reported", {
-  expect_error(not_empty_file("~/magneto/tests/testData/", "DoesntExistFile"),
+  expect_error(not_empty_file("tests/testData/", "DoesntExistFile"),
                regexp = "doesn't exist")
   expect_error(not_empty_file(NA, "Emptyfile.png"),
                regexp = "missing filePath or fileName")
@@ -39,8 +39,8 @@ test_that("Correct Error Reported", {
 
 context(desc = ".horizontal_image_check")
 test_that("Checking for a change from vertical to horozontal",{
-  vertical <- readRDS("~/magneto/tests/testData/vertImagedf.RDS")
-  horizontal <- readRDS("~/magneto/tests/testData/horImagedf.RDS")
+  vertical <- readRDS("tests/testData/vertImagedf.RDS")
+  horizontal <- readRDS("tests/testData/horImagedf.RDS")
   expect_equal(.horizontal_image_check(vertical), horizontal)
   expect_equal(.horizontal_image_check(horizontal), horizontal)
 })
