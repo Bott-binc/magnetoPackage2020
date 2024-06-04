@@ -28,6 +28,6 @@ Imports:
     OpenImageR,
     zoo,
     grDevices,
-    rtiff
+    pixmap
 SystemRequirements:
   Python

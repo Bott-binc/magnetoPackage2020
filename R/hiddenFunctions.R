@@ -1035,3 +1035,17 @@
   return(data.frame(x = outX, y = outY))
 
 }
+
+# these two are from rtiff package
+newPixmapRGB <- function(red=NULL, green=NULL, blue=NULL) {
+    pmap.data <- array(data = c(red, green, blue), dim = c(dim(red)[1], dim(red)[2], 3))
+    pmap <- pixmap::pixmapRGB(pmap.data, nrow=dim(red)[1], ncol=dim(red)[2],
+                      bbox=NULL, bbcent=FALSE, cellres=1)
+    return(pmap)
+  }
+
+
+
+plot.matrix <- function (x, ...) {
+    plot(newPixmapRGB(x, x, x), ...)
+  }
